@@ -1,4 +1,11 @@
 jQuery(document).ready(function($) {
+    // Custom tooltip logic
+    $('[data-tooltip]').each(function() {
+        var tooltipText = $(this).attr('data-tooltip');
+        // Tooltip text is already set via CSS, so we don't need extra JS
+    });
+
+    // Your existing code continues...
     let isGenerating = false;
     let totalOrders = 0;
     let successCount = 0;
@@ -157,10 +164,4 @@ jQuery(document).ready(function($) {
     });
 
     $('#reset-generation').on('click', resetAll);
-
-    // Initialize tooltips
-    $('[data-tooltip]').tooltip();
-    
-    // Initially hide reset button
-    $('#reset-generation').hide();
 });

@@ -397,6 +397,13 @@ JS;
                     <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders">
                     <button type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
                     <button type="button" id="reset-generation" class="button button-secondary">Reset</button>
+                    <!-- <button data-tooltip="This is a custom tooltip!">Hover over me!</button> -->
+
+
+                     <!--  <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders" data-tooltip="Start the order generation!">
+                    <button data-tooltip="Stop the order generation!" type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
+                    <button data-tooltip="Reset to default values and monitoring data!" type="button" id="reset-generation" class="button button-secondary">Reset</button> -->
+                    <!-- <button data-tooltip="This is a custom tooltip!">Hover over me!</button> -->
                 </div>
             </form>
         </div>
