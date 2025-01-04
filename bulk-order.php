@@ -66,10 +66,10 @@ class WC_Bulk_Order_Generator {
             'max_orders' => $settings['max_orders']
         ));
 
-        $this->create_assets();
+        // $this->create_assets();
     }
 
-    private function create_assets() {
+    /* private function create_assets() {
         // Create CSS
         if (!file_exists(plugin_dir_path(__FILE__) . 'css')) {
             mkdir(plugin_dir_path(__FILE__) . 'css', 0755, true);
@@ -85,7 +85,7 @@ class WC_Bulk_Order_Generator {
         
         $js_content = $this->get_javascript_content();
         file_put_contents(plugin_dir_path(__FILE__) . 'js/generator.js', $js_content);
-    }
+    } */
 
     private function get_css_content() {
         return <<<CSS
@@ -337,7 +337,7 @@ JS;
         <div class="wrap wc-bulk-generator-wrap">
             <div class="wc-bulk-generator-header">
                 <h1>Generate Test Orders</h1>
-                <p class="description">Generate test orders in batches with improved performance and monitoring.</p>
+                <p class="description">Generate test orders in batches with monitoring data.</p>
             </div>
 
             <form id="order-generator-form" method="post">
@@ -396,6 +396,7 @@ JS;
                 <div class="control-buttons">
                     <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders">
                     <button type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
+                    <button type="button" id="reset-generation" class="button button-secondary">Reset</button>
                 </div>
             </form>
         </div>

@@ -89,3 +89,15 @@
     color: #666;
     font-size: 13px;
 }
+
+#reset-generation {
+    background-color: #f0f0f1;
+    color: #2271b1;
+    border-color: #2271b1;
+}
+
+#reset-generation:hover {
+    background-color: #f0f0f1;
+    color: #135e96;
+    border-color: #135e96;
+}

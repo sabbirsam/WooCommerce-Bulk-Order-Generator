@@ -14,6 +14,32 @@ jQuery(document).ready(function($) {
         return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
     }
 
+    function resetAll() {
+        isGenerating = false;
+        totalOrders = 0;
+        successCount = 0;
+        failedCount = 0;
+        currentBatch = 0;
+        
+        // Reset all display values
+        $('.progress-bar').css('width', '0%');
+        $('#total-processed').text('0');
+        $('#success-count').text('0');
+        $('#failed-count').text('0');
+        $('#processing-rate').text('0');
+        $('#elapsed-time').text('0s');
+        $('#time-remaining').text('--');
+        $('#num_orders').val('100');
+        
+        // Reset buttons
+        $('#start-generation').prop('disabled', false);
+        $('#stop-generation').prop('disabled', true);
+        $('#reset-generation').hide();
+        
+        // Clear status
+        $('#generation-status').hide();
+    }
+
     function updateProgress() {
         const totalProcessed = successCount + failedCount;
         const percentage = (totalProcessed / totalOrders) * 100;
@@ -42,22 +68,24 @@ jQuery(document).ready(function($) {
 
     function processBatch() {
         if (!isGenerating) {
-            $('#generation-status').text('Generation stopped').removeClass().addClass('notice notice-warning');
+            $('#generation-status').text('Generation stopped').removeClass().addClass('notice notice-warning').show();
             $('#start-generation').prop('disabled', false);
             $('#stop-generation').prop('disabled', true);
+            $('#reset-generation').show();
             return;
         }
 
         const remainingOrders = totalOrders - (successCount + failedCount);
         if (remainingOrders <= 0) {
-            $('#generation-status').text('Generation complete!').removeClass().addClass('notice notice-success');
+            $('#generation-status').text('Generation complete!').removeClass().addClass('notice notice-success').show();
             $('#start-generation').prop('disabled', false);
             $('#stop-generation').prop('disabled', true);
+            $('#reset-generation').show();
             return;
         }
 
         const currentBatchSize = Math.min(batchSize, remainingOrders);
-        $('#generation-status').text(`Processing batch ${currentBatch + 1}...`).removeClass().addClass('notice notice-info');
+        $('#generation-status').text(`Processing batch ${currentBatch + 1}...`).removeClass().addClass('notice notice-info').show();
 
         $.ajax({
             url: wcOrderGenerator.ajaxurl,
@@ -90,10 +118,11 @@ jQuery(document).ready(function($) {
     function handleError(message) {
         failedCount += currentBatchSize;
         updateProgress();
-        $('#generation-status').text(message).removeClass().addClass('notice notice-error');
+        $('#generation-status').text(message).removeClass().addClass('notice notice-error').show();
         isGenerating = false;
         $('#start-generation').prop('disabled', false);
         $('#stop-generation').prop('disabled', true);
+        $('#reset-generation').show();
     }
 
     $('#order-generator-form').on('submit', function(e) {
@@ -114,7 +143,8 @@ jQuery(document).ready(function($) {
 
         $('#start-generation').prop('disabled', true);
         $('#stop-generation').prop('disabled', false);
-        $('#generation-status').text('Starting generation...').removeClass().addClass('notice notice-info');
+        $('#reset-generation').hide();
+        $('#generation-status').text('Starting generation...').removeClass().addClass('notice notice-info').show();
         $('.progress-bar').css('width', '0%');
         
         processBatch();
@@ -123,9 +153,14 @@ jQuery(document).ready(function($) {
     $('#stop-generation').on('click', function() {
         isGenerating = false;
         $(this).prop('disabled', true);
-        $('#generation-status').text('Stopping generation...').removeClass().addClass('notice notice-warning');
+        $('#generation-status').text('Stopping generation...').removeClass().addClass('notice notice-warning').show();
     });
+
+    $('#reset-generation').on('click', resetAll);
 
     // Initialize tooltips
     $('[data-tooltip]').tooltip();
+    
+    // Initially hide reset button
+    $('#reset-generation').hide();
 });
