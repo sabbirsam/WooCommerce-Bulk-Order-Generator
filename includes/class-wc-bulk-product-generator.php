@@ -1,5 +1,9 @@
 <?php
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class WC_Bulk_Product_Generator {
     private $batch_size = 20;
     private $product_titles = array();

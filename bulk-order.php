@@ -134,8 +134,8 @@ class WC_Bulk_Order_Generator {
     public function add_admin_menu() {
         add_submenu_page(
             'woocommerce',
-            'Generate',
-            'Generate',
+            'Bulk Generator',
+            'Bulk Generator',
             'manage_woocommerce',
             'wc-order-generator',
             array($this, 'admin_page')
