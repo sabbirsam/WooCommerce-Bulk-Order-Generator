@@ -17,11 +17,26 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
     return;
 }
 
+
+// Define plugin constants
+define('WC_BULK_GENERATOR_VERSION', '1.0.0');
+define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// Require dependencies
+require_once WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php';
+
+
 class WC_Bulk_Order_Generator {
     private $batch_size = 50;
     private $products_cache = array();
+    private $product_generator;
     
     public function __construct() {
+
+         // Initialize product generator
+         $this->init_dependencies();
+         
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('wp_ajax_process_order_batch', array($this, 'process_order_batch'));
@@ -31,14 +46,41 @@ class WC_Bulk_Order_Generator {
         add_action('woocommerce_email', array($this, 'disable_emails'));
     }
 
+
+    private function init_dependencies() {
+        if (!class_exists('WC_Bulk_Product_Generator')) {
+            if (!file_exists(WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php')) {
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-error"><p>' . 
+                         esc_html__('WooCommerce Bulk Generator: Required file "class-wc-bulk-product-generator.php" is missing.', 'wc-bulk-order-generator') . 
+                         '</p></div>';
+                });
+                return;
+            }
+            require_once WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php';
+        }
+
+        $this->product_generator = new WC_Bulk_Product_Generator();
+    }
+
+
     public function register_settings() {
         register_setting('wc_bulk_generator', 'wc_bulk_generator_settings');
-        add_option('wc_bulk_generator_settings', array(
+        
+        // Set default values for all settings
+        $defaults = array(
             'batch_size' => 50,
             'max_orders' => 1000000,
             'date_range' => 90,
-            'products_per_order' => 5
-        ));
+            'products_per_order' => 5,
+            'product_batch_size' => 20,
+            'max_products' => 1000      
+        );
+        
+        $existing_settings = get_option('wc_bulk_generator_settings', array());
+        $merged_settings = wp_parse_args($existing_settings, $defaults);
+        
+        update_option('wc_bulk_generator_settings', $merged_settings);
     }
 
     public function disable_emails($email_class) {
@@ -53,16 +95,39 @@ class WC_Bulk_Order_Generator {
             return;
         }
 
-        wp_enqueue_style('wc-order-generator', plugins_url('css/generator.css', __FILE__));
-        wp_enqueue_script('jquery');
-        wp_enqueue_script('wc-order-generator', plugins_url('js/generator.js', __FILE__), array('jquery'), '3.0', true);
+        wp_enqueue_style(
+            'wc-order-generator', 
+            WC_BULK_GENERATOR_PLUGIN_URL . 'css/generator.css',
+            array(),
+            WC_BULK_GENERATOR_VERSION
+        );
         
-        $settings = get_option('wc_bulk_generator_settings');
+        wp_enqueue_script(
+            'wc-order-generator',
+            WC_BULK_GENERATOR_PLUGIN_URL . 'js/generator.js',
+            array('jquery'),
+            WC_BULK_GENERATOR_VERSION,
+            true
+        );
+        
+        $settings = get_option('wc_bulk_generator_settings', array());
+        
+        // Ensure all required keys exist with defaults
+        $settings = wp_parse_args($settings, array(
+            'batch_size' => 50,
+            'max_orders' => 1000000,
+            'product_batch_size' => 20,
+            'max_products' => 1000
+        ));
+
         wp_localize_script('wc-order-generator', 'wcOrderGenerator', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('generate_orders_nonce'),
+            'products_nonce' => wp_create_nonce('generate_products_nonce'),
             'batch_size' => $settings['batch_size'],
-            'max_orders' => $settings['max_orders']
+            'max_orders' => $settings['max_orders'],
+            'product_batch_size' => $settings['product_batch_size'],
+            'max_products' => $settings['max_products']
         ));
     }
 
@@ -77,7 +142,7 @@ class WC_Bulk_Order_Generator {
         );
     }
 
-    public function admin_page() {
+    /* public function admin_page() {
         $settings = get_option('wc_bulk_generator_settings');
         ?>
         <div class="wrap wc-bulk-generator-wrap">
@@ -148,7 +213,166 @@ class WC_Bulk_Order_Generator {
             </form>
         </div>
         <?php
+    } */
+
+    public function admin_page() {
+        $settings = get_option('wc_bulk_generator_settings');
+        ?>
+        <div class="wrap wc-bulk-generator-wrap">
+            <div class="wc-bulk-generator-header">
+                <h1>WooCommerce Bulk Generator</h1>
+                <p class="description">Generate test orders and products in batches with monitoring data.</p>
+            </div>
+    
+            <div class="wc-tabs-wrapper">
+                <nav class="nav-tab-wrapper">
+                    <a href="#orders" class="nav-tab nav-tab-active">Orders</a>
+                    <a href="#products" class="nav-tab">Products</a>
+                    <a href="#debug" class="nav-tab">Debug</a>
+                </nav>
+    
+                <!-- Orders Tab -->
+                <div id="orders" class="tab-content active">
+                    <form id="order-generator-form" method="post">
+                        <div class="settings-grid">
+                            <div class="setting-card">
+                                <label for="num_orders">Number of Orders</label>
+                                <input type="number" id="num_orders" name="num_orders" 
+                                       value="100" min="1" max="<?php echo esc_attr($settings['max_orders']); ?>">
+                                <p class="description">Generate between 1 and <?php echo number_format($settings['max_orders']); ?> orders</p>
+                            </div>
+                            
+                            <div class="setting-card">
+                                <label for="batch_size">Batch Size</label>
+                                <input type="number" id="batch_size" name="batch_size" 
+                                       value="<?php echo esc_attr($settings['batch_size']); ?>" min="10" max="100">
+                                <p class="description">Orders to process per batch (10-100)</p>
+                            </div>
+                        </div>
+    
+                        <div class="progress-wrapper">
+                            <div class="progress-bar" style="width: 0%"></div>
+                        </div>
+    
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="total-processed">0</div>
+                                <div class="stat-label">Total Processed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="success-count">0</div>
+                                <div class="stat-label">Successful</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="failed-count">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="processing-rate">0</div>
+                                <div class="stat-label">Orders/Second</div>
+                            </div>
+                        </div>
+    
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="elapsed-time">0s</div>
+                                <div class="stat-label">Elapsed Time</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="time-remaining">--</div>
+                                <div class="stat-label">Estimated Time Remaining</div>
+                            </div>
+                        </div>
+    
+                        <div id="generation-status" class="notice notice-info" style="display: none;"></div>
+    
+                        <div class="control-buttons">
+                            <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders">
+                            <button type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
+                            <button type="button" id="reset-generation" class="button button-secondary">Reset</button>
+                        </div>
+                    </form>
+                </div>
+    
+                <!-- Products Tab -->
+                <div id="products" class="tab-content">
+                    <form id="product-generator-form" method="post">
+                        <div class="settings-grid">
+                            <div class="setting-card">
+                                <label for="num_products">Number of Products</label>
+                                <input type="number" id="num_products" name="num_products" 
+                                       value="50" min="1" max="1000">
+                                <p class="description">Generate between 1 and 1,000 products</p>
+                            </div>
+                            
+                            <div class="setting-card">
+                                <label for="product_batch_size">Batch Size</label>
+                                <input type="number" id="product_batch_size" name="product_batch_size" 
+                                       value="20" min="5" max="50">
+                                <p class="description">Products to process per batch (5-50)</p>
+                            </div>
+                        </div>
+    
+                        <div class="settings-grid">
+                            <div class="setting-card">
+                                <label for="price_min">Minimum Price</label>
+                                <input type="number" id="price_min" name="price_min" 
+                                       value="10" min="0" step="0.01">
+                            </div>
+                            
+                            <div class="setting-card">
+                                <label for="price_max">Maximum Price</label>
+                                <input type="number" id="price_max" name="price_max" 
+                                       value="100" min="0" step="0.01">
+                            </div>
+                        </div>
+    
+                        <div class="progress-wrapper">
+                            <div class="product-progress-bar" style="width: 0%"></div>
+                        </div>
+    
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="products-processed">0</div>
+                                <div class="stat-label">Products Created</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="products-failed">0</div>
+                                <div class="stat-label">Failed</div>
+                            </div>
+                        </div>
+    
+                        <div id="product-generation-status" class="notice notice-info" style="display: none;"></div>
+    
+                        <div class="control-buttons">
+                            <input type="submit" id="start-product-generation" class="button button-primary" value="Generate Products">
+                            <button type="button" id="stop-product-generation" class="button" disabled>Stop Generation</button>
+                            <button type="button" id="reset-product-generation" class="button button-secondary">Reset</button>
+                        </div>
+                    </form>
+                </div>
+    
+                <!-- Debug Tab -->
+                <div id="debug" class="tab-content">
+                    <div class="debug-info">
+                        <h2>Debug Information</h2>
+                        <div class="debug-grid">
+                            <div class="debug-card">
+                                <h3>System Status</h3>
+                                <pre id="system-status">Loading...</pre>
+                            </div>
+                            <div class="debug-card">
+                                <h3>Generation Logs</h3>
+                                <div id="generation-logs" class="debug-logs"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
     }
+
 
     private function cache_products() {
         if (empty($this->products_cache)) {
@@ -373,6 +597,10 @@ class WC_Bulk_Order_Generator {
     }
 }
 
-new WC_Bulk_Order_Generator();
+// Initialize the plugin
+function wc_bulk_generator_init() {
+    new WC_Bulk_Order_Generator();
+}
+add_action('plugins_loaded', 'wc_bulk_generator_init');
 
 

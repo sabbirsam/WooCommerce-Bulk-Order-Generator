@@ -1,3 +1,4 @@
+// --------------Order -------------------------------------
 jQuery(document).ready(function($) {
     // Custom tooltip logic
     $('[data-tooltip]').each(function() {
@@ -164,4 +165,183 @@ jQuery(document).ready(function($) {
     });
 
     $('#reset-generation').on('click', resetAll);
+});
+
+
+
+//------------------------------ Product ----------------------------------
+
+jQuery(document).ready(function($) {
+    // Tab switching functionality
+    $('.nav-tab').on('click', function(e) {
+        e.preventDefault();
+        
+        // Update active tab
+        $('.nav-tab').removeClass('nav-tab-active');
+        $(this).addClass('nav-tab-active');
+        
+        // Show corresponding content
+        $('.tab-content').removeClass('active');
+        $($(this).attr('href')).addClass('active');
+    });
+
+    // Your existing order generation code here...
+    // (Keep all the existing order generation code)
+
+    // Product Generation Code
+    let isGeneratingProducts = false;
+    let totalProducts = 0;
+    let productSuccessCount = 0;
+    let productFailedCount = 0;
+    let currentProductBatch = 0;
+    let productStartTime;
+
+    function resetProductGeneration() {
+        isGeneratingProducts = false;
+        totalProducts = 0;
+        productSuccessCount = 0;
+        productFailedCount = 0;
+        currentProductBatch = 0;
+        
+        // Reset display values
+        $('.product-progress-bar').css('width', '0%');
+        $('#products-processed').text('0');
+        $('#products-failed').text('0');
+        
+        // Reset buttons
+        $('#start-product-generation').prop('disabled', false);
+        $('#stop-product-generation').prop('disabled', true);
+        $('#reset-product-generation').hide();
+        
+        // Clear status
+        $('#product-generation-status').hide();
+    }
+
+    function updateProductProgress() {
+        const totalProcessed = productSuccessCount + productFailedCount;
+        const percentage = (totalProcessed / totalProducts) * 100;
+        
+        // Update progress bar
+        $('.product-progress-bar').css('width', percentage + '%');
+        
+        // Update statistics
+        $('#products-processed').text(productSuccessCount);
+        $('#products-failed').text(productFailedCount);
+    }
+
+    function processProductBatch() {
+        if (!isGeneratingProducts) {
+            $('#product-generation-status').text('Generation stopped').removeClass().addClass('notice notice-warning').show();
+            $('#start-product-generation').prop('disabled', false);
+            $('#stop-product-generation').prop('disabled', true);
+            $('#reset-product-generation').show();
+            return;
+        }
+
+        const remainingProducts = totalProducts - (productSuccessCount + productFailedCount);
+        if (remainingProducts <= 0) {
+            $('#product-generation-status').text('Product generation complete!').removeClass().addClass('notice notice-success').show();
+            $('#start-product-generation').prop('disabled', false);
+            $('#stop-product-generation').prop('disabled', true);
+            $('#reset-product-generation').show();
+            return;
+        }
+
+        const currentBatchSize = Math.min($('#product_batch_size').val(), remainingProducts);
+        $('#product-generation-status').text(`Processing product batch ${currentProductBatch + 1}...`).removeClass().addClass('notice notice-info').show();
+
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'process_product_batch',
+                nonce: wcOrderGenerator.nonce,
+                batch_size: currentBatchSize,
+                price_min: $('#price_min').val(),
+                price_max: $('#price_max').val(),
+                batch_number: currentProductBatch
+            },
+            success: function(response) {
+                if (response.success) {
+                    productSuccessCount += response.data.success;
+                    productFailedCount += response.data.failed;
+                    currentProductBatch++;
+                    updateProductProgress();
+                    
+                    setTimeout(processProductBatch, 500);
+                } else {
+                    handleProductError('Error processing product batch: ' + response.data);
+                }
+            },
+            error: function() {
+                handleProductError('Server error occurred during product generation');
+            }
+        });
+    }
+
+    function handleProductError(message) {
+        productFailedCount += parseInt($('#product_batch_size').val());
+        updateProductProgress();
+        $('#product-generation-status').text(message).removeClass().addClass('notice notice-error').show();
+        isGeneratingProducts = false;
+        $('#start-product-generation').prop('disabled', false);
+        $('#stop-product-generation').prop('disabled', true);
+        $('#reset-product-generation').show();
+    }
+
+    $('#product-generator-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const numProducts = parseInt($('#num_products').val());
+        if (numProducts < 1 || numProducts > 1000) {
+            alert('Please enter a number between 1 and 1,000');
+            return;
+        }
+
+        isGeneratingProducts = true;
+        totalProducts = numProducts;
+        productSuccessCount = 0;
+        productFailedCount = 0;
+        currentProductBatch = 0;
+        productStartTime = Date.now();
+
+        $('#start-product-generation').prop('disabled', true);
+        $('#stop-product-generation').prop('disabled', false);
+        $('#reset-product-generation').hide();
+        $('#product-generation-status').text('Starting product generation...').removeClass().addClass('notice notice-info').show();
+        $('.product-progress-bar').css('width', '0%');
+        
+        processProductBatch();
+    });
+
+    $('#stop-product-generation').on('click', function() {
+        isGeneratingProducts = false;
+        $(this).prop('disabled', true);
+        $('#product-generation-status').text('Stopping product generation...').removeClass().addClass('notice notice-warning').show();
+    });
+
+    $('#reset-product-generation').on('click', resetProductGeneration);
+
+    // Initialize debug tab
+    function updateDebugInfo() {
+        if ($('#debug').hasClass('active')) {
+            $.ajax({
+                url: wcOrderGenerator.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'get_debug_info',
+                    nonce: wcOrderGenerator.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#system-status').html(response.data.status);
+                        $('#generation-logs').html(response.data.logs);
+                    }
+                }
+            });
+        }
+    }
+
+    // Update debug info when tab is activated
+    $('.nav-tab[href="#debug"]').on('click', updateDebugInfo);
 });
