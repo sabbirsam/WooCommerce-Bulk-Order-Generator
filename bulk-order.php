@@ -18,7 +18,7 @@ if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get
 }
 
 class WC_Bulk_Order_Generator {
-    private $batch_size = 50; // Increased batch size
+    private $batch_size = 50;
     private $products_cache = array();
     
     public function __construct() {
@@ -27,7 +27,6 @@ class WC_Bulk_Order_Generator {
         add_action('wp_ajax_process_order_batch', array($this, 'process_order_batch'));
         add_action('wp_ajax_stop_order_generation', array($this, 'stop_order_generation'));
         add_action('admin_init', array($this, 'register_settings'));
-        
         // Disable emails during order generation
         add_action('woocommerce_email', array($this, 'disable_emails'));
     }
@@ -65,260 +64,7 @@ class WC_Bulk_Order_Generator {
             'batch_size' => $settings['batch_size'],
             'max_orders' => $settings['max_orders']
         ));
-
-        // $this->create_assets();
     }
-
-    /* private function create_assets() {
-        // Create CSS
-        if (!file_exists(plugin_dir_path(__FILE__) . 'css')) {
-            mkdir(plugin_dir_path(__FILE__) . 'css', 0755, true);
-        }
-        
-        $css_content = $this->get_css_content();
-        file_put_contents(plugin_dir_path(__FILE__) . 'css/generator.css', $css_content);
-
-        // Create JS
-        if (!file_exists(plugin_dir_path(__FILE__) . 'js')) {
-            mkdir(plugin_dir_path(__FILE__) . 'js', 0755, true);
-        }
-        
-        $js_content = $this->get_javascript_content();
-        file_put_contents(plugin_dir_path(__FILE__) . 'js/generator.js', $js_content);
-    } */
-
-    private function get_css_content() {
-        return <<<CSS
-.wc-bulk-generator-wrap {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.wc-bulk-generator-header {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
-}
-
-.progress-wrapper {
-    background: #f0f0f0;
-    border-radius: 4px;
-    height: 24px;
-    margin: 20px 0;
-    overflow: hidden;
-}
-
-.progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #2271b1, #72aee6);
-    transition: width 0.3s ease;
-    border-radius: 4px;
-    position: relative;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
-}
-
-.stat-card {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 4px;
-    text-align: center;
-}
-
-.stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #2271b1;
-}
-
-.stat-label {
-    color: #666;
-    margin-top: 5px;
-}
-
-.control-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.settings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.setting-card {
-    background: #fff;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.setting-card label {
-    display: block;
-    margin-bottom: 10px;
-    font-weight: 600;
-}
-
-.setting-card input {
-    width: 100%;
-}
-
-.setting-card .description {
-    margin-top: 10px;
-    color: #666;
-    font-size: 13px;
-}
-CSS;
-    }
-
-    private function get_javascript_content() {
-        return <<<'JS'
-jQuery(document).ready(function($) {
-    let isGenerating = false;
-    let totalOrders = 0;
-    let successCount = 0;
-    let failedCount = 0;
-    let currentBatch = 0;
-    const batchSize = parseInt(wcOrderGenerator.batch_size);
-    let startTime;
-
-    function formatDuration(ms) {
-        const seconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    }
-
-    function updateProgress() {
-        const totalProcessed = successCount + failedCount;
-        const percentage = (totalProcessed / totalOrders) * 100;
-        
-        // Update progress bar
-        $('.progress-bar').css('width', percentage + '%');
-        
-        // Update statistics
-        $('#total-processed').text(totalProcessed);
-        $('#success-count').text(successCount);
-        $('#failed-count').text(failedCount);
-        
-        // Calculate and update rate
-        const elapsedTime = (Date.now() - startTime) / 1000; // seconds
-        const ordersPerSecond = totalProcessed / elapsedTime;
-        $('#processing-rate').text(ordersPerSecond.toFixed(2));
-        
-        // Update estimated time remaining
-        const remainingOrders = totalOrders - totalProcessed;
-        const estimatedSecondsRemaining = remainingOrders / ordersPerSecond;
-        $('#time-remaining').text(formatDuration(estimatedSecondsRemaining * 1000));
-        
-        // Update elapsed time
-        $('#elapsed-time').text(formatDuration(Date.now() - startTime));
-    }
-
-    function processBatch() {
-        if (!isGenerating) {
-            $('#generation-status').text('Generation stopped').removeClass().addClass('notice notice-warning');
-            $('#start-generation').prop('disabled', false);
-            $('#stop-generation').prop('disabled', true);
-            return;
-        }
-
-        const remainingOrders = totalOrders - (successCount + failedCount);
-        if (remainingOrders <= 0) {
-            $('#generation-status').text('Generation complete!').removeClass().addClass('notice notice-success');
-            $('#start-generation').prop('disabled', false);
-            $('#stop-generation').prop('disabled', true);
-            return;
-        }
-
-        const currentBatchSize = Math.min(batchSize, remainingOrders);
-        $('#generation-status').text(`Processing batch ${currentBatch + 1}...`).removeClass().addClass('notice notice-info');
-
-        $.ajax({
-            url: wcOrderGenerator.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'process_order_batch',
-                nonce: wcOrderGenerator.nonce,
-                batch_size: currentBatchSize,
-                batch_number: currentBatch
-            },
-            success: function(response) {
-                if (response.success) {
-                    successCount += response.data.success;
-                    failedCount += response.data.failed;
-                    currentBatch++;
-                    updateProgress();
-                    
-                    // Reduced delay between batches for better performance
-                    setTimeout(processBatch, 500);
-                } else {
-                    handleError('Error processing batch: ' + response.data);
-                }
-            },
-            error: function() {
-                handleError('Server error occurred');
-            }
-        });
-    }
-
-    function handleError(message) {
-        failedCount += currentBatchSize;
-        updateProgress();
-        $('#generation-status').text(message).removeClass().addClass('notice notice-error');
-        isGenerating = false;
-        $('#start-generation').prop('disabled', false);
-        $('#stop-generation').prop('disabled', true);
-    }
-
-    $('#order-generator-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        const numOrders = parseInt($('#num_orders').val());
-        if (numOrders < 1 || numOrders > wcOrderGenerator.max_orders) {
-            alert(`Please enter a number between 1 and ${wcOrderGenerator.max_orders}`);
-            return;
-        }
-
-        isGenerating = true;
-        totalOrders = numOrders;
-        successCount = 0;
-        failedCount = 0;
-        currentBatch = 0;
-        startTime = Date.now();
-
-        $('#start-generation').prop('disabled', true);
-        $('#stop-generation').prop('disabled', false);
-        $('#generation-status').text('Starting generation...').removeClass().addClass('notice notice-info');
-        $('.progress-bar').css('width', '0%');
-        
-        processBatch();
-    });
-
-    $('#stop-generation').on('click', function() {
-        isGenerating = false;
-        $(this).prop('disabled', true);
-        $('#generation-status').text('Stopping generation...').removeClass().addClass('notice notice-warning');
-    });
-
-    // Initialize tooltips
-    $('[data-tooltip]').tooltip();
-});
-JS;
-    }
-
 
     public function add_admin_menu() {
         add_submenu_page(
@@ -397,12 +143,6 @@ JS;
                     <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders">
                     <button type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
                     <button type="button" id="reset-generation" class="button button-secondary">Reset</button>
-                    <!-- <button data-tooltip="This is a custom tooltip!">Hover over me!</button> -->
-
-
-                     <!--  <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders" data-tooltip="Start the order generation!">
-                    <button data-tooltip="Stop the order generation!" type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
-                    <button data-tooltip="Reset to default values and monitoring data!" type="button" id="reset-generation" class="button button-secondary">Reset</button> -->
                     <!-- <button data-tooltip="This is a custom tooltip!">Hover over me!</button> -->
                 </div>
             </form>
