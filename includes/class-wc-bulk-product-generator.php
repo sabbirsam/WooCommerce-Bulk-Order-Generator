@@ -7,7 +7,6 @@ class WC_Bulk_Product_Generator {
     
     public function __construct() {
         add_action('wp_ajax_process_product_batch', array($this, 'process_product_batch'));
-        add_action('wp_ajax_stop_product_generation', array($this, 'stop_product_generation'));
         $this->init_sample_data();
     }
 
@@ -45,13 +44,17 @@ class WC_Bulk_Product_Generator {
     }
 
     public function process_product_batch() {
-        check_ajax_referer('generate_products_nonce', 'nonce');
+        if (!check_ajax_referer('generate_products_nonce', 'nonce', false)) {
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
         
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
 
+        // Validate and sanitize input parameters
         $batch_size = isset($_POST['batch_size']) ? absint($_POST['batch_size']) : 20;
         $price_min = isset($_POST['price_min']) ? floatval($_POST['price_min']) : 10;
         $price_max = isset($_POST['price_max']) ? floatval($_POST['price_max']) : 100;
@@ -62,37 +65,59 @@ class WC_Bulk_Product_Generator {
 
         $success_count = 0;
         $failed_count = 0;
+        $errors = array();
 
         try {
-            global $wpdb;
-            $wpdb->query('START TRANSACTION');
-
+            // Disable WordPress auto-save and revision features temporarily
+            wp_defer_term_counting(true);
+            wp_defer_comment_counting(true);
+            
+            // Process products in smaller chunks for better memory management
             for ($i = 0; $i < $batch_size; $i++) {
                 try {
                     $product_data = $this->generate_product_data($price_min, $price_max);
+                    
+                    // Verify product data
+                    if (empty($product_data['title']) || empty($product_data['description'])) {
+                        throw new Exception('Invalid product data generated');
+                    }
+                    
                     $product = $this->create_product($product_data);
                     
-                    if ($product && !is_wp_error($product)) {
+                    if ($product && !is_wp_error($product) && $product->get_id() > 0) {
                         $success_count++;
+                        // Clear object cache for each product
+                        clean_post_cache($product->get_id());
                     } else {
                         $failed_count++;
+                        $errors[] = 'Failed to create product: ' . ($product instanceof WP_Error ? $product->get_error_message() : 'Unknown error');
                     }
+                    
+                    // Free up memory
+                    unset($product);
+                    wp_cache_flush();
                 } catch (Exception $e) {
-                    error_log('Product generation error: ' . $e->getMessage());
                     $failed_count++;
+                    $errors[] = $e->getMessage();
+                    error_log('Product generation error: ' . $e->getMessage());
                 }
             }
 
-            $wpdb->query('COMMIT');
+            // Re-enable WordPress features
+            wp_defer_term_counting(false);
+            wp_defer_comment_counting(false);
 
             wp_send_json_success(array(
                 'success' => $success_count,
-                'failed' => $failed_count
+                'failed' => $failed_count,
+                'errors' => $errors
             ));
 
         } catch (Exception $e) {
-            $wpdb->query('ROLLBACK');
-            wp_send_json_error($e->getMessage());
+            wp_send_json_error(array(
+                'message' => $e->getMessage(),
+                'errors' => $errors
+            ));
         }
     }
 
@@ -145,47 +170,66 @@ class WC_Bulk_Product_Generator {
     }
 
     private function create_product($data) {
-        $product = new WC_Product_Simple();
-        
-        $product->set_name($data['title']);
-        $product->set_description($data['description']);
-        $product->set_short_description(substr($data['description'], 0, 100) . '...');
-        $product->set_regular_price($data['regular_price']);
-        
-        if (!is_null($data['sale_price'])) {
-            $product->set_sale_price($data['sale_price']);
-        }
-        
-        $product->set_sku($data['sku']);
-        
-        // Set other product data
-        $product->set_manage_stock(true);
-        $product->set_stock_quantity($data['stock_quantity']);
-        $product->set_weight($data['weight']);
-        $product->set_length($data['length']);
-        $product->set_width($data['width']);
-        $product->set_height($data['height']);
-        
-        // Randomly set featured status (10% chance)
-        if (rand(1, 100) <= 10) {
-            $product->set_featured(true);
-        }
-        
-        // Set product categories
-        $category_ids = $this->get_random_categories();
-        if (!empty($category_ids)) {
-            $product->set_category_ids($category_ids);
-        }
-
-        // Save the product
-        $product_id = $product->save();
-        
-        if ($product_id) {
+        try {
+            // Create new product object
+            $product = new WC_Product_Simple();
+            
+            // Basic product data
+            $product->set_name(wp_strip_all_tags($data['title']));
+            $product->set_description(wp_kses_post($data['description']));
+            $product->set_short_description(wp_kses_post(substr($data['description'], 0, 100) . '...'));
+            $product->set_regular_price(strval($data['regular_price'])); // Convert to string
+            
+            if (!is_null($data['sale_price'])) {
+                $product->set_sale_price(strval($data['sale_price']));
+            }
+            
+            // Generate unique SKU
+            $sku = $data['sku'];
+            $counter = 1;
+            while (wc_get_product_id_by_sku($sku)) {
+                $sku = $data['sku'] . '-' . $counter;
+                $counter++;
+            }
+            $product->set_sku($sku);
+            
+            // Stock management
+            $product->set_manage_stock(true);
+            $product->set_stock_quantity($data['stock_quantity']);
+            $product->set_stock_status('instock');
+            
+            // Dimensions
+            $product->set_weight(strval($data['weight']));
+            $product->set_length(strval($data['length']));
+            $product->set_width(strval($data['width']));
+            $product->set_height(strval($data['height']));
+            
+            // Status and visibility
+            $product->set_status('publish');
+            $product->set_catalog_visibility('visible');
+            
+            // Save product
+            $product_id = $product->save();
+            
+            if (!$product_id) {
+                throw new Exception('Failed to save product');
+            }
+            
+            // Add categories
+            $category_ids = $this->get_random_categories();
+            if (!empty($category_ids)) {
+                wp_set_object_terms($product_id, $category_ids, 'product_cat');
+            }
+            
             // Add placeholder image
             $this->maybe_add_placeholder_image($product_id);
+            
+            return $product;
+            
+        } catch (Exception $e) {
+            error_log('Error creating product: ' . $e->getMessage());
+            return new WP_Error('product_creation_failed', $e->getMessage());
         }
-
-        return $product;
     }
 
     private function get_random_categories() {
@@ -212,11 +256,6 @@ class WC_Bulk_Product_Generator {
         if ($placeholder_id) {
             set_post_thumbnail($product_id, $placeholder_id);
         }
-    }
-
-    public function stop_product_generation() {
-        check_ajax_referer('generate_products_nonce', 'nonce');
-        wp_send_json_success();
     }
 }
 

@@ -1,5 +1,19 @@
 // --------------Order -------------------------------------
 jQuery(document).ready(function($) {
+
+    // Tab switching functionality
+    $('.nav-tab').on('click', function(e) {
+        e.preventDefault();
+        
+        // Update active tab
+        $('.nav-tab').removeClass('nav-tab-active');
+        $(this).addClass('nav-tab-active');
+        
+        // Show corresponding content
+        $('.tab-content').removeClass('active');
+        $($(this).attr('href')).addClass('active');
+    });
+    
     // Custom tooltip logic
     $('[data-tooltip]').each(function() {
         var tooltipText = $(this).attr('data-tooltip');
@@ -172,22 +186,6 @@ jQuery(document).ready(function($) {
 //------------------------------ Product ----------------------------------
 
 jQuery(document).ready(function($) {
-    // Tab switching functionality
-    $('.nav-tab').on('click', function(e) {
-        e.preventDefault();
-        
-        // Update active tab
-        $('.nav-tab').removeClass('nav-tab-active');
-        $(this).addClass('nav-tab-active');
-        
-        // Show corresponding content
-        $('.tab-content').removeClass('active');
-        $($(this).attr('href')).addClass('active');
-    });
-
-    // Your existing order generation code here...
-    // (Keep all the existing order generation code)
-
     // Product Generation Code
     let isGeneratingProducts = false;
     let totalProducts = 0;
@@ -255,12 +253,13 @@ jQuery(document).ready(function($) {
             type: 'POST',
             data: {
                 action: 'process_product_batch',
-                nonce: wcOrderGenerator.nonce,
+                nonce: wcOrderGenerator.products_nonce,
                 batch_size: currentBatchSize,
                 price_min: $('#price_min').val(),
                 price_max: $('#price_max').val(),
                 batch_number: currentProductBatch
             },
+            
             success: function(response) {
                 if (response.success) {
                     productSuccessCount += response.data.success;
@@ -322,26 +321,5 @@ jQuery(document).ready(function($) {
 
     $('#reset-product-generation').on('click', resetProductGeneration);
 
-    // Initialize debug tab
-    function updateDebugInfo() {
-        if ($('#debug').hasClass('active')) {
-            $.ajax({
-                url: wcOrderGenerator.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'get_debug_info',
-                    nonce: wcOrderGenerator.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $('#system-status').html(response.data.status);
-                        $('#generation-logs').html(response.data.logs);
-                    }
-                }
-            });
-        }
-    }
-
-    // Update debug info when tab is activated
-    $('.nav-tab[href="#debug"]').on('click', updateDebugInfo);
+    
 });

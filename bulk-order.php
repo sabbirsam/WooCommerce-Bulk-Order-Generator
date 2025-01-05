@@ -142,79 +142,6 @@ class WC_Bulk_Order_Generator {
         );
     }
 
-    /* public function admin_page() {
-        $settings = get_option('wc_bulk_generator_settings');
-        ?>
-        <div class="wrap wc-bulk-generator-wrap">
-            <div class="wc-bulk-generator-header">
-                <h1>Generate Test Orders</h1>
-                <p class="description">Generate test orders in batches with monitoring data.</p>
-            </div>
-
-            <form id="order-generator-form" method="post">
-                <div class="settings-grid">
-                    <div class="setting-card">
-                        <label for="num_orders">Number of Orders</label>
-                        <input type="number" id="num_orders" name="num_orders" 
-                               value="100" min="1" max="<?php echo esc_attr($settings['max_orders']); ?>">
-                        <p class="description">Generate between 1 and <?php echo number_format($settings['max_orders']); ?> orders</p>
-                    </div>
-                    
-                    <div class="setting-card">
-                        <label for="batch_size">Batch Size</label>
-                        <input type="number" id="batch_size" name="batch_size" 
-                               value="<?php echo esc_attr($settings['batch_size']); ?>" min="10" max="100">
-                        <p class="description">Orders to process per batch (10-100)</p>
-                    </div>
-                </div>
-
-                <div class="progress-wrapper">
-                    <div class="progress-bar" style="width: 0%"></div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-processed">0</div>
-                        <div class="stat-label">Total Processed</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="success-count">0</div>
-                        <div class="stat-label">Successful</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="failed-count">0</div>
-                        <div class="stat-label">Failed</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="processing-rate">0</div>
-                        <div class="stat-label">Orders/Second</div>
-                    </div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="elapsed-time">0s</div>
-                        <div class="stat-label">Elapsed Time</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="time-remaining">--</div>
-                        <div class="stat-label">Estimated Time Remaining</div>
-                    </div>
-                </div>
-
-                <div id="generation-status" class="notice notice-info" style="display: none;"></div>
-
-                <div class="control-buttons">
-                    <input type="submit" id="start-generation" class="button button-primary" value="Generate Orders">
-                    <button type="button" id="stop-generation" class="button" disabled>Stop Generation</button>
-                    <button type="button" id="reset-generation" class="button button-secondary">Reset</button>
-                    <!-- <button data-tooltip="This is a custom tooltip!">Hover over me!</button> -->
-                </div>
-            </form>
-        </div>
-        <?php
-    } */
-
     public function admin_page() {
         $settings = get_option('wc_bulk_generator_settings');
         ?>
@@ -228,7 +155,7 @@ class WC_Bulk_Order_Generator {
                 <nav class="nav-tab-wrapper">
                     <a href="#orders" class="nav-tab nav-tab-active">Orders</a>
                     <a href="#products" class="nav-tab">Products</a>
-                    <a href="#debug" class="nav-tab">Debug</a>
+                    <a href="#debug" class="nav-tab">About Me</a>
                 </nav>
     
                 <!-- Orders Tab -->
@@ -355,17 +282,9 @@ class WC_Bulk_Order_Generator {
                 <!-- Debug Tab -->
                 <div id="debug" class="tab-content">
                     <div class="debug-info">
-                        <h2>Debug Information</h2>
-                        <div class="debug-grid">
-                            <div class="debug-card">
-                                <h3>System Status</h3>
-                                <pre id="system-status">Loading...</pre>
-                            </div>
-                            <div class="debug-card">
-                                <h3>Generation Logs</h3>
-                                <div id="generation-logs" class="debug-logs"></div>
-                            </div>
-                        </div>
+                        <h2>WooCommerce Bulk Order Generator</h2>
+                        <p>Generates bulk random orders for WooCommerce testing with optimized batch processing</p>
+                        
                     </div>
                 </div>
             </div>
