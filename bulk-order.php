@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Bulk Order Generator
+ * Plugin Name: WooCommerce Bulk Generator
  * Plugin URI: 
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
  * Version: 1.0
@@ -134,8 +134,8 @@ class WC_Bulk_Order_Generator {
     public function add_admin_menu() {
         add_submenu_page(
             'woocommerce',
-            'Generate Test Orders',
-            'Generate Test Orders',
+            'Generate',
+            'Generate',
             'manage_woocommerce',
             'wc-order-generator',
             array($this, 'admin_page')
@@ -283,7 +283,7 @@ class WC_Bulk_Order_Generator {
                 <div id="debug" class="tab-content">
                     <div class="debug-info">
                         <h2>WooCommerce Bulk Order Generator</h2>
-                        <p>Generates bulk random orders for WooCommerce testing with optimized batch processing</p>
+                        <p>Generates bulk random orders/products for WooCommerce testing with optimized batch processing</p>
                         
                     </div>
                 </div>
