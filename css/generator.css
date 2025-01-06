@@ -1,5 +1,5 @@
 /* -----------------Order------------------------ */
-.wc-bulk-generator-wrap {
+.wc-bulk-order-generator-wrap {
     max-width: 1200px;
     margin: 20px auto;
     padding: 20px;
@@ -47,7 +47,7 @@
 
 
 /* Order css  */
-.wc-bulk-generator-header {
+.wc-bulk-order-generator-header {
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #eee;
