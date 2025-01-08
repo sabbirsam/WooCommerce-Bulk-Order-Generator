@@ -80,6 +80,13 @@ class WC_Bulk_Order_Generator {
         add_action('woocommerce_email', array($this, 'disable_emails'));
 
         add_action('admin_notices', array($this, 'check_woocommerce_status'));
+
+         // Add custom plugin action links (Dashboard link).
+         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_dashboard_link'));
+
+         // Add custom row meta information.
+        add_filter('plugin_row_meta', array($this, 'add_custom_plugin_row_meta'), 10, 2);
+
     }
 
 
@@ -101,6 +108,44 @@ class WC_Bulk_Order_Generator {
         }
 
         $this->product_generator = new WC_Bulk_Product_Generator();
+    }
+
+    /**
+     * Add the "Dashboard" link next to the "Deactivate" button on the plugin page.
+     *
+     * @param array $links The existing action links.
+     * @return array Modified action links.
+     */
+    public function add_dashboard_link($links) {
+        $dashboard_link = array(
+            'dashboard' => '<a href="' . admin_url('admin.php?page=wc-order-generator') . '">' . esc_html__('Dashboard', 'wc-bulk-order-generator') . '</a>',
+        );
+        return array_merge($dashboard_link, $links);
+    }
+
+
+    /**
+     * Add custom row meta information below the plugin description.
+     *
+     * @param array $links The existing meta links.
+     * @param string $file The plugin file path.
+     * @return array Modified meta links.
+     */
+    public function add_custom_plugin_row_meta($links, $file) {
+        // Check if this is the plugin we're targeting.
+        if (plugin_basename(__FILE__) == $file) {
+            // Add the custom metadata links
+            $custom_links = array(
+                'docs'              => '<a href="https://docs.example.com" target="_blank">Docs</a>',
+                'api_docs'          => '<a href="https://api.example.com" target="_blank">API docs</a>',
+                'community_support' => '<a href="https://community.example.com" target="_blank">Community support</a>',
+            );
+
+            // Add the custom links to the existing ones.
+            return array_merge($links, $custom_links);
+        }
+
+        return $links;
     }
 
 
