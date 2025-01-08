@@ -1,30 +1,38 @@
 <?php
 /**
  * Plugin Name: WC Bulk Order Generator
- * Plugin URI: 
+ * 
+ * @author            devsabbirahmed
+ * @copyright         2024- SABBIRSAM
+ * @license           GPL-2.0-or-laters
+ * @package WC Bulk Order Generator
+ * 
+ * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
  * Version: 1.0
+ * Requires at least: 5.9
+ * Requires PHP:      5.6
  * Author: sabbirsam
+ * Author URI:        https://profiles.wordpress.org/devsabbirahmed/
  * Text Domain: wc-bulk-order-generator
- * License: GPLv2 or later
+ * Domain Path: /languages/
+ * License:           GPL-2.0+
+ * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
-
-if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-    return;
-}
+ defined('ABSPATH') || die('Hey, what are you doing here? You silly human!');
 
 
 // Define plugin constants.
 define('WC_BULK_GENERATOR_VERSION', '1.0.0');
+define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Require dependencies.
-require_once WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php';
+if ( file_exists(WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php') ) {
+    require_once WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php';
+}
 
 /**
  * Class WC_Bulk_Order_Generator
@@ -58,9 +66,9 @@ class WC_Bulk_Order_Generator {
      */
     public function __construct() {
 
-         // Initialize product generator.
-         $this->init_dependencies();
-          // Admin menu and scripts.
+        // Initialize product generator.
+        $this->init_dependencies();
+        // Admin menu and scripts.
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
         // AJAX actions.
@@ -70,6 +78,8 @@ class WC_Bulk_Order_Generator {
         add_action('admin_init', array($this, 'register_settings'));
         // Disable emails during order generation.
         add_action('woocommerce_email', array($this, 'disable_emails'));
+
+        add_action('admin_notices', array($this, 'check_woocommerce_status'));
     }
 
 
@@ -165,6 +175,30 @@ class WC_Bulk_Order_Generator {
         remove_all_actions('woocommerce_new_order_notification');
     }
 
+    /**
+     * Check if WooCommerce is active or installed and show an admin notice if it's not.
+     */
+    public function check_woocommerce_status() {
+        // Check if WooCommerce is active.
+        if (!is_plugin_active('woocommerce/woocommerce.php')) {
+            ?>
+            <div class="notice notice-error is-dismissible">
+                <p>
+                    <?php 
+                    printf(
+                        __('WooCommerce is not installed or active. <strong>%s</strong> may not work correctly.', 'wc-bulk-order-generator'),
+                        'WC Bulk Order Generator'
+                    );
+                    ?>
+                    <a href="<?php echo esc_url(admin_url('plugin-install.php?s=woocommerce&tab=search&type=term')); ?>" class="button button-primary" style="margin-left: 10px;">
+                        <?php _e('Install WooCommerce', 'wc-bulk-order-generator'); ?>
+                    </a>
+                </p>
+            </div>
+            <?php
+        }
+    }
+    
     /**
      * Enqueues styles and scripts for the bulk order generator page in the WooCommerce admin.
      * 
@@ -264,13 +298,13 @@ class WC_Bulk_Order_Generator {
     
             <div class="wc-tabs-wrapper">
                 <nav class="nav-tab-wrapper">
-                    <a href="#orders" class="nav-tab nav-tab-active"><?php esc_html_e('Orders', 'wc-bulk-order-generator'); ?></a>
-                    <a href="#products" class="nav-tab"><?php esc_html_e('Products', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#products" class="nav-tab nav-tab-active"><?php esc_html_e('Products', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#orders" class="nav-tab"><?php esc_html_e('Orders', 'wc-bulk-order-generator'); ?></a>
                     <a href="#debug" class="nav-tab"><?php esc_html_e('About Me', 'wc-bulk-order-generator'); ?></a>
                 </nav>
     
                 <!-- Orders Tab -->
-                <div id="orders" class="tab-content active">
+                <div id="orders" class="tab-content">
                     <form id="order-generator-form" method="post">
                         <div class="settings-grid">
                             <div class="setting-card">
@@ -346,7 +380,7 @@ class WC_Bulk_Order_Generator {
                 </div>
     
                 <!-- Products Tab -->
-                <div id="products" class="tab-content">
+                <div id="products" class="tab-content active">
                     <form id="product-generator-form" method="post">
                         <div class="settings-grid">
                             <div class="setting-card">
