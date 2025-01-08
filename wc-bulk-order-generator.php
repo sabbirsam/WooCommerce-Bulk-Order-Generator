@@ -84,9 +84,6 @@ class WC_Bulk_Order_Generator {
          // Add custom plugin action links (Dashboard link).
          add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_dashboard_link'));
 
-         // Add custom row meta information.
-        add_filter('plugin_row_meta', array($this, 'add_custom_plugin_row_meta'), 10, 2);
-
     }
 
 
@@ -118,36 +115,10 @@ class WC_Bulk_Order_Generator {
      */
     public function add_dashboard_link($links) {
         $dashboard_link = array(
-            'dashboard' => '<a href="' . admin_url('admin.php?page=wc-order-generator') . '">' . esc_html__('Dashboard', 'wc-bulk-order-generator') . '</a>',
+            'dashboard' => '<a href="' . admin_url('admin.php?page=wc-order-generator') . '">' . esc_html__('Generator', 'wc-bulk-order-generator') . '</a>',
         );
         return array_merge($dashboard_link, $links);
     }
-
-
-    /**
-     * Add custom row meta information below the plugin description.
-     *
-     * @param array $links The existing meta links.
-     * @param string $file The plugin file path.
-     * @return array Modified meta links.
-     */
-    public function add_custom_plugin_row_meta($links, $file) {
-        // Check if this is the plugin we're targeting.
-        if (plugin_basename(__FILE__) == $file) {
-            // Add the custom metadata links
-            $custom_links = array(
-                'docs'              => '<a href="https://docs.example.com" target="_blank">Docs</a>',
-                'api_docs'          => '<a href="https://api.example.com" target="_blank">API docs</a>',
-                'community_support' => '<a href="https://community.example.com" target="_blank">Community support</a>',
-            );
-
-            // Add the custom links to the existing ones.
-            return array_merge($links, $custom_links);
-        }
-
-        return $links;
-    }
-
 
     /**
      * Registers plugin settings for the WC Bulk Order Generator.
@@ -337,7 +308,7 @@ class WC_Bulk_Order_Generator {
         ?>
         <div class="wrap wc-bulk-order-generator-wrap">
             <div class="wc-bulk-order-generator-header">
-                <h1><?php esc_html_e('Bulk Order Generator', 'wc-bulk-order-generator'); ?></h1>
+                <h1><?php esc_html_e('WC Bulk Generator', 'wc-bulk-order-generator'); ?></h1>
                 <p class="description"><?php esc_html_e('Generate test orders and products in batches with monitoring data.', 'wc-bulk-order-generator'); ?></p>
             </div>
     
