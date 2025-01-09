@@ -157,7 +157,7 @@ class WC_Bulk_Product_Generator {
         }
 
         // Generate SKU
-        $sku = sprintf('TEST-%s-%d', strtoupper(substr(str_replace(' ', '', $noun), 0, 3)), rand(1000, 9999));
+        $sku = sprintf('TEST-%s-%d', strtoupper(substr(str_replace(' ', '', $noun), 0, 3)), rand(1000000, 9999999));
 
         return array(
             'title' => $title,

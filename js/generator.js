@@ -1,32 +1,20 @@
 // --------------Order -------------------------------------
 jQuery(document).ready(function($) {
-
     // Tab switching functionality
     $('.nav-tab').on('click', function(e) {
         e.preventDefault();
-        
-        // Update active tab
         $('.nav-tab').removeClass('nav-tab-active');
         $(this).addClass('nav-tab-active');
-        
-        // Show corresponding content
         $('.tab-content').removeClass('active');
         $($(this).attr('href')).addClass('active');
     });
-    
-    // Custom tooltip logic
-    $('[data-tooltip]').each(function() {
-        var tooltipText = $(this).attr('data-tooltip');
-        // Tooltip text is already set via CSS, so we don't need extra JS
-    });
 
-    // Your existing code continues...
     let isGenerating = false;
     let totalOrders = 0;
     let successCount = 0;
     let failedCount = 0;
     let currentBatch = 0;
-    const batchSize = parseInt(wcOrderGenerator.batch_size);
+    let isStopping = false;
     let startTime;
 
     function formatDuration(ms) {
@@ -38,6 +26,7 @@ jQuery(document).ready(function($) {
 
     function resetAll() {
         isGenerating = false;
+        isStopping = false;
         totalOrders = 0;
         successCount = 0;
         failedCount = 0;
@@ -66,48 +55,53 @@ jQuery(document).ready(function($) {
         const totalProcessed = successCount + failedCount;
         const percentage = (totalProcessed / totalOrders) * 100;
         
-        // Update progress bar
         $('.progress-bar').css('width', percentage + '%');
-        
-        // Update statistics
         $('#total-processed').text(totalProcessed);
         $('#success-count').text(successCount);
         $('#failed-count').text(failedCount);
         
-        // Calculate and update rate
-        const elapsedTime = (Date.now() - startTime) / 1000; // seconds
+        const elapsedTime = (Date.now() - startTime) / 1000;
         const ordersPerSecond = totalProcessed / elapsedTime;
         $('#processing-rate').text(ordersPerSecond.toFixed(2));
         
-        // Update estimated time remaining
         const remainingOrders = totalOrders - totalProcessed;
         const estimatedSecondsRemaining = remainingOrders / ordersPerSecond;
         $('#time-remaining').text(formatDuration(estimatedSecondsRemaining * 1000));
-        
-        // Update elapsed time
         $('#elapsed-time').text(formatDuration(Date.now() - startTime));
     }
 
+    function stopGeneration() {
+        return $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'stop_order_generation',
+                nonce: wcOrderGenerator.nonce
+            }
+        });
+    }
+
     function processBatch() {
-        if (!isGenerating) {
-            $('#generation-status').text('Generation stopped').removeClass().addClass('notice notice-warning').show();
-            $('#start-generation').prop('disabled', false);
-            $('#stop-generation').prop('disabled', true);
-            $('#reset-generation').show();
+        if (!isGenerating || isStopping) {
+            finishGeneration('Generation stopped', 'warning');
             return;
         }
 
-        const remainingOrders = totalOrders - (successCount + failedCount);
+        const totalProcessed = successCount + failedCount;
+        const remainingOrders = totalOrders - totalProcessed;
+        
         if (remainingOrders <= 0) {
-            $('#generation-status').text('Generation complete!').removeClass().addClass('notice notice-success').show();
-            $('#start-generation').prop('disabled', false);
-            $('#stop-generation').prop('disabled', true);
-            $('#reset-generation').show();
+            finishGeneration('Generation complete!', 'success');
             return;
         }
 
-        const currentBatchSize = Math.min(batchSize, remainingOrders);
-        $('#generation-status').text(`Processing batch ${currentBatch + 1}...`).removeClass().addClass('notice notice-info').show();
+        const currentBatchSize = Math.min($('#batch_size').val(), remainingOrders);
+        console.log(currentBatchSize)
+        $('#generation-status')
+            .text(`Processing batch ${currentBatch + 1}...`)
+            .removeClass()
+            .addClass('notice notice-info')
+            .show();
 
         $.ajax({
             url: wcOrderGenerator.ajaxurl,
@@ -125,26 +119,43 @@ jQuery(document).ready(function($) {
                     currentBatch++;
                     updateProgress();
                     
-                    // Reduced delay between batches for better performance
-                    setTimeout(processBatch, 500);
+                    if (!isStopping) {
+                        setTimeout(processBatch, 500);
+                    } else {
+                        finishGeneration('Generation stopped', 'warning');
+                    }
                 } else {
                     handleError('Error processing batch: ' + response.data);
                 }
             },
-            error: function() {
-                handleError('Server error occurred');
+            error: function(xhr, status, error) {
+                if (!isStopping) {
+                    handleError('Server error occurred: ' + error);
+                } else {
+                    finishGeneration('Generation stopped', 'warning');
+                }
             }
         });
     }
 
-    function handleError(message) {
-        failedCount += currentBatchSize;
-        updateProgress();
-        $('#generation-status').text(message).removeClass().addClass('notice notice-error').show();
+    function finishGeneration(message, type) {
+        $('#generation-status')
+            .text(message)
+            .removeClass()
+            .addClass(`notice notice-${type}`)
+            .show();
+            
         isGenerating = false;
+        isStopping = false;
         $('#start-generation').prop('disabled', false);
         $('#stop-generation').prop('disabled', true);
         $('#reset-generation').show();
+    }
+
+    function handleError(message) {
+        failedCount += batchSize;
+        updateProgress();
+        finishGeneration(message, 'error');
     }
 
     $('#order-generator-form').on('submit', function(e) {
@@ -157,6 +168,7 @@ jQuery(document).ready(function($) {
         }
 
         isGenerating = true;
+        isStopping = false;
         totalOrders = numOrders;
         successCount = 0;
         failedCount = 0;
@@ -166,16 +178,31 @@ jQuery(document).ready(function($) {
         $('#start-generation').prop('disabled', true);
         $('#stop-generation').prop('disabled', false);
         $('#reset-generation').hide();
-        $('#generation-status').text('Starting generation...').removeClass().addClass('notice notice-info').show();
+        $('#generation-status')
+            .text('Starting generation...')
+            .removeClass()
+            .addClass('notice notice-info')
+            .show();
         $('.progress-bar').css('width', '0%');
         
         processBatch();
     });
 
     $('#stop-generation').on('click', function() {
-        isGenerating = false;
+        if (!isGenerating) return;
+        
+        isStopping = true;
         $(this).prop('disabled', true);
-        $('#generation-status').text('Stopping generation...').removeClass().addClass('notice notice-warning').show();
+        $('#generation-status')
+            .text('Stopping generation...')
+            .removeClass()
+            .addClass('notice notice-warning')
+            .show();
+
+        stopGeneration()
+            .fail(function(xhr, status, error) {
+                console.error('Failed to stop generation:', error);
+            });
     });
 
     $('#reset-generation').on('click', resetAll);
