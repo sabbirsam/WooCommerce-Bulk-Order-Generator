@@ -201,17 +201,18 @@ class WC_Bulk_Order_Generator {
         if (!is_plugin_active('woocommerce/woocommerce.php')) {
             ?>
             <div class="notice notice-error is-dismissible">
-                <p>
-                    <?php 
-                    printf(
-                        __('WooCommerce is not installed or active. <strong>%s</strong> may not work correctly.', 'wc-bulk-order-generator'),
-                        'WC Bulk Order Generator'
-                    );
-                    ?>
-                    <a href="<?php echo esc_url(admin_url('plugin-install.php?s=woocommerce&tab=search&type=term')); ?>" class="button button-primary" style="margin-left: 10px;">
-                        <?php _e('Install WooCommerce', 'wc-bulk-order-generator'); ?>
-                    </a>
-                </p>
+            <p>
+                <?php 
+                printf(
+                    esc_html__('WooCommerce is not installed or active. %1$s may not work correctly.', 'wc-bulk-order-generator'),
+                    '<strong>' . esc_html__('WC Bulk Order Generator', 'wc-bulk-order-generator') . '</strong>'
+                );
+                ?>
+                <a href="<?php echo esc_url(admin_url('plugin-install.php?s=woocommerce&tab=search&type=term')); ?>" class="button button-primary" style="margin-left: 10px;">
+                    <?php echo esc_html__('Install WooCommerce', 'wc-bulk-order-generator'); ?>
+                </a>
+            </p>
+
             </div>
             <?php
         }
@@ -328,19 +329,19 @@ class WC_Bulk_Order_Generator {
                             <div class="setting-card">
                                 <label for="num_orders"><?php esc_html_e('Number of Orders', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="num_orders" name="num_orders" 
-                                       value="100" 
-                                       min="1" 
-                                       max="<?php echo esc_attr($max_orders); ?>">
+                                    value="100" 
+                                    min="1" 
+                                    max="<?php echo esc_attr($max_orders); ?>">
                                 <p class="description">
                                     <?php 
                                     printf(
                                         esc_html__('Generate between 1 and %s orders', 'wc-bulk-order-generator'), 
-                                        number_format_i18n($max_orders)
+                                        esc_html(number_format_i18n($max_orders))
                                     ); 
                                     ?>
                                 </p>
                             </div>
-    
+
                             <div class="setting-card">
                                 <label for="batch_size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="batch_size" name="batch_size" 
@@ -508,7 +509,7 @@ class WC_Bulk_Order_Generator {
         $this->disable_emails(null);
         
         // Increase limits for long-running processes
-        set_time_limit(0); // No time limit
+        set_time_limit(0); // No time limit.
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', 0);
         
@@ -528,13 +529,17 @@ class WC_Bulk_Order_Generator {
     
         try {
             // Cache products before the loop
-            $available_products = $this->cache_products();
+            $available_products = wp_cache_get('available_products');
+            if (!$available_products) {
+                $available_products = $this->cache_products();
+                wp_cache_set('available_products', $available_products, '', HOUR_IN_SECONDS);
+            }
     
             if (empty($available_products)) {
                 wp_send_json_error('No products found');
                 return;
             }
-
+    
             $max_products_per_order = absint($settings['products_per_order']);
             $date_range = absint($settings['date_range']);
     
@@ -546,14 +551,14 @@ class WC_Bulk_Order_Generator {
                 'AU' => array('NSW', 'VIC', 'QLD', 'WA')
             );
             
-            global $wpdb;
-            
             // Process orders in smaller chunks to prevent timeout
             $chunk_size = min(10, $batch_size);
             $chunks = ceil($batch_size / $chunk_size);
+    
+            global $wpdb;
             
             for ($chunk = 0; $chunk < $chunks; $chunk++) {
-                $wpdb->query('START TRANSACTION');
+                $wpdb->query('START TRANSACTION'); // Begin transaction
                 
                 $current_chunk_size = min($chunk_size, $batch_size - ($chunk * $chunk_size));
                 
@@ -567,16 +572,16 @@ class WC_Bulk_Order_Generator {
                         
                         $order = wc_create_order();
                         
-                        $num_products = rand(1, max(1, $max_products_per_order));
+                        $num_products = wp_rand(1, max(1, $max_products_per_order));
                         $product_keys = array_rand($available_products, $num_products);
                         if (!is_array($product_keys)) {
                             $product_keys = array($product_keys);
                         }
-        
+    
                         $order_total = 0.0;
                         foreach ($product_keys as $key) {
                             $product = $available_products[$key];
-                            $quantity = rand(1, 5);
+                            $quantity = wp_rand(1, 5);
                             $price = (float)$product->get_price();
                             
                             if ($price > 0) {
@@ -584,36 +589,36 @@ class WC_Bulk_Order_Generator {
                                 $order_total += ($price * $quantity);
                             }
                         }
-        
+    
                         $country = $country_codes[array_rand($country_codes)];
                         $state = $states[$country][array_rand($states[$country])];
-        
+    
                         $this->set_customer_details($order, $country, $state);
-        
-                        $date = date('Y-m-d H:i:s', strtotime('-' . rand(0, $date_range) . ' days'));
+    
+                        $date = gmdate('Y-m-d H:i:s', strtotime('-' . wp_rand(0, $date_range) . ' days'));
                         $order->set_date_created($date);
-        
+    
                         $this->set_order_status($order, $date);
-        
+    
                         if ($order_total > 0) {
                             $this->add_shipping_and_tax($order, $order_total, $country);
                         }
-        
+    
                         $payment_methods = array('bacs', 'cheque', 'cod', 'paypal');
                         $order->set_payment_method($payment_methods[array_rand($payment_methods)]);
-        
+    
                         $order->calculate_totals();
                         $order->save();
-        
+    
                         $success_count++;
-        
+    
                     } catch (Exception $e) {
-                        error_log('Order generation error: ' . $e->getMessage());
+                        // error_log('Order generation error: ' . $e->getMessage());
                         $failed_count++;
                     }
                 }
                 
-                $wpdb->query('COMMIT');
+                $wpdb->query('COMMIT'); // Commit transaction
                 
                 // Give the server a small break between chunks
                 if ($chunk < $chunks - 1) {
@@ -627,10 +632,11 @@ class WC_Bulk_Order_Generator {
             ));
     
         } catch (Exception $e) {
-            $wpdb->query('ROLLBACK');
+            $wpdb->query('ROLLBACK'); // Rollback on failure
             wp_send_json_error($e->getMessage());
         }
     }
+    
 
     /**
      * Sets the customer details for an order.
@@ -653,15 +659,15 @@ class WC_Bulk_Order_Generator {
         
         $first_name = $first_names[array_rand($first_names)];
         $last_name = $last_names[array_rand($last_names)];
-        $address = rand(100, 9999) . ' ' . array_rand(array('Main St' => 1, 'Oak Ave' => 1, 'Market St' => 1));
+        $address = wp_rand(100, 9999) . ' ' . array_rand(array('Main St' => 1, 'Oak Ave' => 1, 'Market St' => 1));
         $city = array_rand(array('New York' => 1, 'Los Angeles' => 1, 'Chicago' => 1, 'Houston' => 1));
-        $postcode = sprintf('%05d', rand(100000, 999999));
+        $postcode = sprintf('%05d', wp_rand(100000, 999999));
         
         $address_data = array(
             'first_name' => $first_name,
             'last_name'  => $last_name,
             'address_1'  => $address,
-            'address_2'  => rand(0, 1) ? 'Apt ' . rand(10000, 99999) : '',
+            'address_2'  => wp_rand(0, 1) ? 'Apt ' . wp_rand(10000, 99999) : '',
             'city'       => $city,
             'state'      => $state,
             'postcode'   => $postcode,
@@ -669,8 +675,8 @@ class WC_Bulk_Order_Generator {
         );
 
         $billing_data = array_merge($address_data, array(
-            'email' => strtolower($first_name . '.' . $last_name . rand(1000000, 9999999) . '@example.com'),
-            'phone' => sprintf('(%d) %d-%d', rand(2000, 9999), rand(2000, 9999), rand(1000000, 9999999))
+            'email' => strtolower($first_name . '.' . $last_name . wp_rand(1000000, 9999999) . '@example.com'),
+            'phone' => sprintf('(%d) %d-%d', wp_rand(2000, 9999), wp_rand(2000, 9999), wp_rand(1000000, 9999999))
         ));
 
         foreach ($billing_data as $key => $value) {
@@ -725,7 +731,7 @@ class WC_Bulk_Order_Generator {
         }
 
         // Choose status based on weighted probability
-        $rand = rand(1, 100);
+        $rand = wp_rand(1, 100);
         $cumulative = 0;
         foreach ($statuses as $status => $probability) {
             $cumulative += $probability;
@@ -760,7 +766,7 @@ class WC_Bulk_Order_Generator {
         
         $method = array_rand($shipping_methods);
         $range = $shipping_methods[$method];
-        $shipping_cost = (float)rand($range[0], $range[1]);
+        $shipping_cost = (float)wp_rand($range[0], $range[1]);
         
         if ($shipping_cost > 0) {
             $item = new WC_Order_Item_Shipping();
@@ -770,7 +776,7 @@ class WC_Bulk_Order_Generator {
         }
 
         if (in_array($country, array('US', 'CA', 'GB', 'AU'))) {
-            $tax_rate = (float)rand(5, 20) / 100;
+            $tax_rate = (float)wp_rand(5, 20) / 100;
             $tax_total = (float)$order_total * $tax_rate;
             $order->set_cart_tax($tax_total);
         }
