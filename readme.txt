@@ -8,50 +8,48 @@ Stable tag: 1.0.0
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
-
 Generate unlimited test orders and products for WooCommerce with realistic data. Perfect for testing, development, and performance optimization.
-
 
 == Description ==
 
 WooCommerce Bulk Order Generator helps developers and store owners create realistic test data quickly. Generate thousands of products and orders with just a few clicks.
 
-🚀 Key Features
+## 🚀 Key Features
 
-### Products Generation
-**🛍️ Create varied product types (Simple, Variable, Virtual)
-**🛍️ Random pricing and stock levels
-**🛍️ Auto-generated product descriptions
-**🛍️ Custom categories and attributes
-**🛍️ Batch processing for large volumes
+### 🛍️ Products Generation  
+- 📦 **Create varied product types** 
+- 💰 **Random pricing and stock levels**  
+- 📝 **Auto-generated product descriptions**  
+- 🗂️ **Custom categories and attributes**  
+- 🔄 **Batch processing for large volumes**  
 
-### Orders Generation
-**🛍️ Uses generated products for realistic orders
-**🛍️ Varied customer details and quantities
-**🛍️ Multiple payment methods
-**🛍️ Dynamic shipping options
-**🛍️ Automated tax calculations
+### 🛒 Orders Generation  
+- 🛍️ **Uses generated products for realistic orders**  
+- 👥 **Varied customer details and quantities**  
+- 💳 **Multiple payment methods**  
+- 🚚 **Dynamic shipping options**  
+- 🧾 **Automated tax calculations**  
 
-### Performance Features
-**🖱 Memory-efficient batch processing
-**🖱 Real-time progress tracking
-**🖱 Configurable batch sizes
-**🖱 Transaction management
+### ⚡ Performance Features  
+- 🛠️ **Memory-efficient batch processing**  
+- 🔍 **Real-time progress tracking**  
+- 📊 **Configurable batch sizes**  
+- 🔒 **Transaction management**  
 
-### 💡Perfect For
-**💯 Populating test stores
-**💯 Theme development
-**💯 Performance testing
-**💯 Training demos
-**💯 Plugin compatibility testing
+### 💡 Perfect For  
+- 🛒 **Populating test stores**  
+- 🎨 **Theme development**  
+- 🏎️ **Performance testing**  
+- 🧑‍🏫 **Training demos**  
+- 🔌 **Plugin compatibility testing**  
 
-### 🛠️Technical Features
-**⚙️ Product data caching
-**⚙️ Error handling
-**⚙️ Email notification control
-**⚙️ Configurable generation limits
-**⚙️ Database transaction safety
-**⚙️ Memory optimization
+### 🛠️ Technical Features  
+- 🔍 **Product data caching**  
+- ⚠️ **Error handling**  
+- 🛑 **Configurable generation limits**  
+- 💾 **Database transaction safety**  
+- 🧠 **Memory optimization**  
+
 
 
 

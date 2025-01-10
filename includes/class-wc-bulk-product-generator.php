@@ -103,7 +103,7 @@ class WC_Bulk_Product_Generator {
                 } catch (Exception $e) {
                     $failed_count++;
                     $errors[] = $e->getMessage();
-                    error_log('Product generation error: ' . $e->getMessage());
+                    // error_log('Product generation error: ' . $e->getMessage());
                 }
             }
 
@@ -231,7 +231,7 @@ class WC_Bulk_Product_Generator {
             return $product;
             
         } catch (Exception $e) {
-            error_log('Error creating product: ' . $e->getMessage());
+            // error_log('Error creating product: ' . $e->getMessage());
             return new WP_Error('product_creation_failed', $e->getMessage());
         }
     }

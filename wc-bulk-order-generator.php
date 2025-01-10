@@ -9,7 +9,7 @@
  * 
  * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
- * Version: 1.0
+ * Version: 1.0.0
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Author: sabbirsam
@@ -453,7 +453,7 @@ class WC_Bulk_Order_Generator {
                 <!-- Debug Tab -->
                 <div id="debug" class="tab-content">
                     <div class="debug-info">
-                        <h2><?php esc_html_e('WooCommerce Bulk Product & Order Generator', 'wc-bulk-order-generator'); ?></h2>
+                        <h2><?php esc_html_e('WC Bulk Product & Order Generator', 'wc-bulk-order-generator'); ?></h2>
                         <p><?php esc_html_e('Generates bulk orders/products for WooCommerce with optimized batch processing', 'wc-bulk-order-generator'); ?></p>
                     </div>
                 </div>
