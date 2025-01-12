@@ -9,7 +9,6 @@ jQuery(document).ready(function($) {
         $($(this).attr('href')).addClass('active');
     });
 
-    // Add toast container to body if it doesn't exist
     if (!$('#toast-container').length) {
         $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
     }

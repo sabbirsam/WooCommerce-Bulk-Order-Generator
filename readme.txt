@@ -81,6 +81,9 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 
 == Changelog ==
 
+**Version 1.0.1**  
+- Update the readme and about page with minor bug fixing  
+
 **Version 1.0.0**  
 - Initial release
 - New: Order generation with realistic data
