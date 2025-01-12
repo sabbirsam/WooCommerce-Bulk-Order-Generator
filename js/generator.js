@@ -9,6 +9,31 @@ jQuery(document).ready(function($) {
         $($(this).attr('href')).addClass('active');
     });
 
+    // Add toast container to body if it doesn't exist
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
+        
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
     let isGenerating = false;
     let totalOrders = 0;
     let successCount = 0;
@@ -83,7 +108,8 @@ jQuery(document).ready(function($) {
 
     function processBatch() {
         if (!isGenerating || isStopping) {
-            finishGeneration('Generation stopped', 'warning');
+            finishGeneration('Order Generation stopped', 'warning');
+            showToast('Order Generation stopped', 'warning');
             return;
         }
 
@@ -91,7 +117,8 @@ jQuery(document).ready(function($) {
         const remainingOrders = totalOrders - totalProcessed;
         
         if (remainingOrders <= 0) {
-            finishGeneration('Generation complete!', 'success');
+            finishGeneration('Order Generation complete!', 'success');
+            showToast('Order Generation complete!', 'success');
             return;
         }
 
@@ -123,16 +150,21 @@ jQuery(document).ready(function($) {
                         setTimeout(processBatch, 500);
                     } else {
                         finishGeneration('Generation stopped', 'warning');
+                        showToast('Order Generation stopped', 'warning');
+                        
                     }
                 } else {
                     handleError('Error processing batch: ' + response.data);
+                    showToast('Eror processing batch', 'error');
                 }
             },
             error: function(xhr, status, error) {
                 if (!isStopping) {
                     handleError('Server error occurred: ' + error);
+                    showToast('Server error occurred', 'error');
                 } else {
                     finishGeneration('Generation stopped', 'warning');
+                    showToast('Order Generation stopped', 'warning');
                 }
             }
         });
@@ -147,6 +179,7 @@ jQuery(document).ready(function($) {
             
         isGenerating = false;
         isStopping = false;
+
         $('#start-generation').prop('disabled', false);
         $('#stop-generation').prop('disabled', true);
         $('#reset-generation').show();
@@ -162,8 +195,13 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         
         const numOrders = parseInt($('#num_orders').val());
-        if (numOrders < 1 || numOrders > wcOrderGenerator.max_orders) {
-            alert(`Please enter a number between 1 and ${wcOrderGenerator.max_orders}`);
+        if (numOrders < 1 || numOrders > 10000) {
+            alert('Please enter a number between 1 and 10k');
+            return;
+        }
+        const batch_size = parseInt($('#batch_size').val());
+        if (batch_size < 5 || batch_size > 30) {
+            alert('Please enter a batch number between 5 and 30');
             return;
         }
 
@@ -213,6 +251,32 @@ jQuery(document).ready(function($) {
 //------------------------------ Product ----------------------------------
 
 jQuery(document).ready(function($) {
+
+    // Add toast container if it doesn't exist
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
+        
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+
     // Product Generation Code
     let isGeneratingProducts = false;
     let totalProducts = 0;
@@ -260,6 +324,9 @@ jQuery(document).ready(function($) {
             $('#start-product-generation').prop('disabled', false);
             $('#stop-product-generation').prop('disabled', true);
             $('#reset-product-generation').show();
+
+            showToast('Product Generation stopped', 'warning');
+
             return;
         }
 
@@ -269,6 +336,7 @@ jQuery(document).ready(function($) {
             $('#start-product-generation').prop('disabled', false);
             $('#stop-product-generation').prop('disabled', true);
             $('#reset-product-generation').show();
+            showToast('Product Generation complete!', 'success');
             return;
         }
 
@@ -319,8 +387,14 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         
         const numProducts = parseInt($('#num_products').val());
-        if (numProducts < 1 || numProducts > 1000) {
-            alert('Please enter a number between 1 and 1,000');
+        if (numProducts < 1 || numProducts > 10000) {
+            alert('Please enter a number between 1 and 10k');
+            return;
+        }
+
+        const product_batch_size = parseInt($('#product_batch_size').val());
+        if (product_batch_size < 5 || product_batch_size > 30) {
+            alert('Please enter a batch number between 5 and 30');
             return;
         }
 

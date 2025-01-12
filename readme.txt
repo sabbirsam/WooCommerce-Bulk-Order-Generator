@@ -1,10 +1,10 @@
-=== WC Bulk Order Generator - Create Test Orders & Products in Batches ===
+=== WC Bulk Order Generator ===
 Contributors: devsabbirahmed
 Tags: bulk orders, test products, order generator, product generator, testing tools
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 5.6
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -12,43 +12,43 @@ Generate unlimited test orders and products for WooCommerce with realistic data.
 
 == Description ==
 
-WooCommerce Bulk Order Generator helps developers and store owners create realistic test data quickly. Generate thousands of products and orders with just a few clicks.
+WC Bulk Order Generator helps developers and store owners create realistic WooCommerce test data quickly. Generate thousands of WooCommerce products and orders with just a few clicks.
 
 ## 🚀 Key Features
 
 ### 🛍️ Products Generation  
-- 📦 **Create varied product types** 
-- 💰 **Random pricing and stock levels**  
-- 📝 **Auto-generated product descriptions**  
-- 🗂️ **Custom categories and attributes**  
-- 🔄 **Batch processing for large volumes**  
+- **Create varied product types** 
+- **Random pricing and stock levels**  
+- **Auto-generated product descriptions**  
+- **Custom categories and attributes**  
+- **Batch processing for large volumes**  
 
 ### 🛒 Orders Generation  
-- 🛍️ **Uses generated products for realistic orders**  
-- 👥 **Varied customer details and quantities**  
-- 💳 **Multiple payment methods**  
-- 🚚 **Dynamic shipping options**  
-- 🧾 **Automated tax calculations**  
+- **Uses generated products for realistic orders**  
+- **Varied customer details and quantities**  
+- **Multiple payment methods**  
+- **Dynamic shipping options**  
+- **Automated tax calculations**  
 
 ### ⚡ Performance Features  
-- 🛠️ **Memory-efficient batch processing**  
-- 🔍 **Real-time progress tracking**  
-- 📊 **Configurable batch sizes**  
-- 🔒 **Transaction management**  
+- **Memory-efficient batch processing**  
+- **Real-time progress tracking**  
+- **Configurable batch sizes**  
+- **Transaction management**  
 
 ### 💡 Perfect For  
-- 🛒 **Populating test stores**  
-- 🎨 **Theme development**  
-- 🏎️ **Performance testing**  
-- 🧑‍🏫 **Training demos**  
-- 🔌 **Plugin compatibility testing**  
+- **Populating test stores**  
+- **Theme development**  
+- **Performance testing**  
+- **Training demos**  
+- **Plugin compatibility testing**  
 
 ### 🛠️ Technical Features  
-- 🔍 **Product data caching**  
-- ⚠️ **Error handling**  
-- 🛑 **Configurable generation limits**  
-- 💾 **Database transaction safety**  
-- 🧠 **Memory optimization**  
+- **Product data caching**  
+- **Error handling**  
+- **Configurable generation limits**  
+- **Database transaction safety**  
+- **Memory optimization**  
 
 
 
