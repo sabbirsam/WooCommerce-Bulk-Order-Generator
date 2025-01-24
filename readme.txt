@@ -4,7 +4,7 @@ Tags: bulk orders, test products, order generator, product generator, testing to
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 5.6
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -80,6 +80,12 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 2. Order generation interface with progress monitoring
 
 == Changelog ==
+
+**Version 1.1.0**  
+🚀 New Features
+- Order Export: Comprehensive export functionality for WooCommerce orders
+- Order Import: Batch-based CSV order import with advanced processing
+- Improved User Interface with modern design elements
 
 **Version 1.0.1**  
 - Update the readme and about page with minor bug fixing  
