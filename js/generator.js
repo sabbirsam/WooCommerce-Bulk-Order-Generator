@@ -437,6 +437,32 @@ jQuery(document).ready(function($) {
 //export ----------------------------------------
 
 jQuery(document).ready(function($) {
+
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
+        
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+
     let exportIsGenerating = false;
     let exportTotalOrders = 0;
     let exportStartTime = 0;
@@ -472,7 +498,7 @@ jQuery(document).ready(function($) {
                     
                     processExportBatch(0, response.data.export_session);
                 } else {
-                    alert('Export initialization failed: ' + response.data);
+                    showToast('Export initialization failed: ' + response.data, 'error');
                 }
             }
         });
@@ -515,14 +541,20 @@ jQuery(document).ready(function($) {
                         window.location.href = response.data.download_url;
                     }
                 } else {
-                    alert('Export batch failed: ' + response.data);
+                    showToast('Export batch failed!' + response.data, 'error');
                 }
             }
         });
     }
 
     function updateExportProgress(processed, success, failed) {
-        const percentage = (processed / exportTotalOrders) * 100;
+        // Ensure exportTotalOrders is initialized and greater than 0
+        if (!exportTotalOrders || exportTotalOrders <= 0) {
+            showToast("Exporting number of order not found!", 'info')
+            return;
+        }
+    
+        const percentage = Math.min((processed / exportTotalOrders) * 100, 100); // Ensure it does not exceed 100%
         
         // Ensure progress bar width is set correctly
         $('.export-progress-bar').css({
@@ -531,19 +563,27 @@ jQuery(document).ready(function($) {
             'height': '25px',
             'transition': 'width 0.5s ease-in-out'
         });
-
+    
+        // Update processed, success, and failed counts
         $('#export-total-processed').text(processed);
         $('#export-success-count').text(success);
         $('#export-failed-count').text(failed);
-        
-        const elapsedTime = Date.now() - exportStartTime;
-        $('#export-elapsed-time').text(formatDuration(elapsedTime));
-        
-        const ordersPerSecond = processed / (elapsedTime / 1000);
+    
+        // Calculate elapsed time and handle NaN
+        const currentTime = Date.now();
+        const elapsedTime = exportStartTime ? currentTime - exportStartTime : 0;
+        $('#export-elapsed-time').text(elapsedTime > 0 ? formatDuration(elapsedTime) : '0s');
+    
+        // Calculate orders per second and handle NaN
+        const ordersPerSecond = elapsedTime > 0 ? processed / (elapsedTime / 1000) : 0;
+    
+        // Calculate remaining time and handle NaN
         const remainingOrders = exportTotalOrders - processed;
-        const estimatedSecondsRemaining = remainingOrders / ordersPerSecond;
-        $('#export-time-remaining').text(formatDuration(estimatedSecondsRemaining * 1000));
+        const estimatedSecondsRemaining = ordersPerSecond > 0 ? remainingOrders / ordersPerSecond : 0;
+        $('#export-time-remaining').text(estimatedSecondsRemaining > 0 ? formatDuration(estimatedSecondsRemaining * 1000) : '0s');
     }
+
+        
 
     function formatDuration(ms) {
         const seconds = Math.floor(ms / 1000);
@@ -568,19 +608,44 @@ jQuery(document).ready(function($) {
 
 // Import 
 jQuery(document).ready(function($) {
-    $('#order-import-form').on('submit', function(e) {
-        e.preventDefault();
+
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
         
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+
+    $('#order-import-form').on('submit', function (e) {
+        e.preventDefault();
+    
         var formData = new FormData(this);
         formData.append('action', 'import_orders');
         formData.append('nonce', wcOrderGenerator.import_nonce);
         formData.append('current_batch', 0);
-
+    
         var startTime = Date.now();
         var totalOrders = 0;
-        var currentBatch = 0;
         var totalImportedCount = 0;
-
+    
         function processNextBatch(formData) {
             $.ajax({
                 url: wcOrderGenerator.ajaxurl,
@@ -588,63 +653,60 @@ jQuery(document).ready(function($) {
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
                         var endTime = Date.now();
                         var elapsedTime = Math.floor((endTime - startTime) / 1000);
-                        
+    
                         totalOrders = response.data.total_orders;
-                        currentBatch = response.data.current_batch;
                         totalImportedCount += response.data.successful;
-
-                        $('#import-total-processed').text(
-                            Math.min(totalOrders, (currentBatch + 1) * 50)
-                        );
+    
+                        $('#import-total-processed').text(totalImportedCount);
                         $('#import-success-count').text(totalImportedCount);
                         $('#import-failed-count').text(response.data.failed);
                         $('#import-skipped-count').text(response.data.skipped);
                         $('#import-elapsed-time').text(elapsedTime + 's');
-
-                        // Update progress bar
-                        var progressPercentage = Math.floor(
-                            ((currentBatch + 1) * 50 / totalOrders) * 100
-                        );
+    
+                        // Update progress bar based on actual progress
+                        var progressPercentage = Math.floor((totalImportedCount / totalOrders) * 100);
                         $('.import-progress-bar').css({
-                            'width': Math.min(progressPercentage, 100) + '%',
+                            'width': progressPercentage + '%',
                             'background-color': 'blue',
                             'height': '25px',
                             'transition': 'width 0.5s ease-in-out'
                         });
-
+    
                         // Check if import is complete
                         if (response.data.is_complete) {
-                            alert('Import completed successfully!');
+                            showToast('Order Import complete!', 'success');
+                            $('.import-progress-bar').css('background-color', 'green');
                             return;
                         }
-
+    
                         // Prepare next batch
                         var nextBatchData = new FormData();
                         nextBatchData.append('action', 'import_orders');
                         nextBatchData.append('nonce', wcOrderGenerator.import_nonce);
-                        nextBatchData.append('current_batch', currentBatch + 1);
+                        nextBatchData.append('current_batch', response.data.current_batch + 1);
                         nextBatchData.append('csv_file', formData.get('csv_file'));
                         nextBatchData.append('batch_size', formData.get('batch_size'));
-
+    
                         // Process next batch
                         processNextBatch(nextBatchData);
                     } else {
-                        alert('Import failed: ' + response.data);
+                        showToast('Order Import failed!' + response.data, 'warning');
                     }
                 },
-                error: function() {
-                    alert('An error occurred during import');
+                error: function () {
+                    showToast('Server error occurred!', 'error');
                 }
             });
         }
-
+    
         // Start batch processing
         processNextBatch(formData);
     });
+    
 
      // Reset buttons
      $('#reset-order-import').on('click', function() {
@@ -652,7 +714,6 @@ jQuery(document).ready(function($) {
         $('.import-progress-bar').css('width', '0%');
         $('#import-total-processed, #import-success-count, #import-failed-count').text('0');
         $('#import-elapsed-time').text('0s');
-        // $('#import-csv').text('0s');
     });
 
 });

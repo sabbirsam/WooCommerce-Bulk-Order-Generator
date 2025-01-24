@@ -483,8 +483,8 @@ class WC_Bulk_Order_Generator {
                             <div class="setting-card">
                                 <label for="export-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="export-batch-size" name="export-batch-size" 
-                                    value="50" min="5" max="500">
-                                <p class="description"><?php esc_html_e('Number of orders to export per batch (5-500)', 'wc-bulk-order-generator'); ?></p>
+                                    value="10" min="5" max="30">
+                                <p class="description"><?php esc_html_e('Number of orders to export per batch (5-30)', 'wc-bulk-order-generator'); ?></p>
                             </div>
 
                             <div class="setting-card">
@@ -558,8 +558,8 @@ class WC_Bulk_Order_Generator {
                                     </th>
                                     <td>
                                         <input type="number" id="import-batch-size" name="batch_size" 
-                                            value="50" min="5" max="500">
-                                        <p class="description"><?php esc_html_e('Number of orders to process per batch (5-500)', 'wc-bulk-order-importer'); ?></p>
+                                            value="10" min="5" max="30">
+                                        <p class="description"><?php esc_html_e('Number of orders to process per batch (5-30)', 'wc-bulk-order-importer'); ?></p>
                                     </td>
                                 </tr>
                             </table>
