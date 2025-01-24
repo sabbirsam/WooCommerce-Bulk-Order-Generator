@@ -76,8 +76,11 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 
 == Screenshots ==
 
-1. Product generation settings with progress monitoring
-2. Order generation interface with progress monitoring
+1. Order generation interface with progress monitoring
+2. Order Export interface with progress monitoring
+3. Order Import interface with progress monitoring
+4. Product generation settings with progress monitoring
+5. About page
 
 == Changelog ==
 
