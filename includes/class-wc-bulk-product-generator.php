@@ -103,7 +103,7 @@ class WC_Bulk_Product_Generator {
                 } catch (Exception $e) {
                     $failed_count++;
                     $errors[] = $e->getMessage();
-                    error_log('Product generation error: ' . $e->getMessage());
+                    // error_log('Product generation error: ' . $e->getMessage());
                 }
             }
 
@@ -147,17 +147,17 @@ class WC_Bulk_Product_Generator {
         );
 
         // Generate random price within range
-        $regular_price = round(rand($price_min * 100, $price_max * 100) / 100, 2);
+        $regular_price = round(wp_rand($price_min * 100, $price_max * 100) / 100, 2);
         
         // 30% chance of sale price
         $sale_price = null;
-        if (rand(1, 100) <= 30) {
-            $discount = rand(10, 30) / 100; // 10-30% discount
+        if (wp_rand(1, 100) <= 30) {
+            $discount = wp_rand(10, 30) / 100; // 10-30% discount
             $sale_price = round($regular_price * (1 - $discount), 2);
         }
 
         // Generate SKU
-        $sku = sprintf('TEST-%s-%d', strtoupper(substr(str_replace(' ', '', $noun), 0, 3)), rand(1000000, 9999999));
+        $sku = sprintf('TEST-%s-%d', strtoupper(substr(str_replace(' ', '', $noun), 0, 3)), wp_rand(1000000, 9999999));
 
         return array(
             'title' => $title,
@@ -165,11 +165,11 @@ class WC_Bulk_Product_Generator {
             'regular_price' => $regular_price,
             'sale_price' => $sale_price,
             'sku' => $sku,
-            'stock_quantity' => rand(0, 100),
-            'weight' => rand(1, 50) / 10,
-            'length' => rand(10, 100),
-            'width' => rand(10, 100),
-            'height' => rand(10, 100)
+            'stock_quantity' => wp_rand(0, 100),
+            'weight' => wp_rand(1, 50) / 10,
+            'length' => wp_rand(10, 100),
+            'width' => wp_rand(10, 100),
+            'height' => wp_rand(10, 100)
         );
     }
 
@@ -231,7 +231,7 @@ class WC_Bulk_Product_Generator {
             return $product;
             
         } catch (Exception $e) {
-            error_log('Error creating product: ' . $e->getMessage());
+            // error_log('Error creating product: ' . $e->getMessage());
             return new WP_Error('product_creation_failed', $e->getMessage());
         }
     }
@@ -248,7 +248,7 @@ class WC_Bulk_Product_Generator {
         }
 
         // Randomly select 1-3 categories
-        $num_cats = rand(1, min(3, count($categories)));
+        $num_cats = wp_rand(1, min(3, count($categories)));
         shuffle($categories);
         return array_slice($categories, 0, $num_cats);
     }

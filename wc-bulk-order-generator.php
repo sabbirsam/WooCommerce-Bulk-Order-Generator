@@ -9,7 +9,7 @@
  * 
  * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
- * Version: 1.0
+ * Version: 1.1.0
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Author: sabbirsam
@@ -24,7 +24,7 @@
 
 
 // Define plugin constants.
-define('WC_BULK_GENERATOR_VERSION', '1.0.0');
+define('WC_BULK_GENERATOR_VERSION', '1.1.0');
 define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -59,15 +59,17 @@ class WC_Bulk_Order_Generator {
      * @var WC_Bulk_Product_Generator
      */
     private $product_generator;
+    private $order_export;
+    private $order_import;
 
     /**
      * WC_Bulk_Order_Generator constructor.
      * Initializes the plugin by setting up dependencies, hooks, and admin functionality.
      */
     public function __construct() {
-
         // Initialize product generator.
         $this->init_dependencies();
+
         // Admin menu and scripts.
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
@@ -81,31 +83,50 @@ class WC_Bulk_Order_Generator {
 
         add_action('admin_notices', array($this, 'check_woocommerce_status'));
 
-         // Add custom plugin action links (Dashboard link).
-         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_dashboard_link'));
+        // Add custom plugin action links (Dashboard link).
+        add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_dashboard_link'));
 
     }
-
 
     /**
      * Initializes dependencies for the class, specifically the product generator.
      * Ensures the required file is included and the product generator instance is created.
      */
+   
     private function init_dependencies() {
-        if (!class_exists('WC_Bulk_Product_Generator')) {
-            if (!file_exists(WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php')) {
-                add_action('admin_notices', function() {
-                    echo '<div class="notice notice-error"><p>' . 
-                         esc_html__('Bulk Order Generator: Required file "class-wc-bulk-product-generator.php" is missing.', 'wc-bulk-order-generator') . 
-                         '</p></div>';
-                });
-                return;
+        $dependencies = [
+            'WC_Bulk_Product_Generator' => 'includes/class-wc-bulk-product-generator.php',
+            'WC_Bulk_Order_Export' => 'includes/class-wc-bulk-order-export.php',
+            'WC_Bulk_Order_Import' => 'includes/class-wc-bulk-order-import.php',
+        ];
+    
+        foreach ($dependencies as $class_name => $file_path) {
+            if (!class_exists($class_name)) {
+                $full_path = WC_BULK_GENERATOR_PLUGIN_DIR . $file_path;
+    
+                if (!file_exists($full_path)) {
+                    add_action('admin_notices', function() use ($file_path) {
+                        echo '<div class="notice notice-error"><p>' .
+                             sprintf(
+                                 esc_html__('Bulk Order Generator: Required file "%s" is missing.', 'wc-bulk-order-generator'),
+                                 esc_html($file_path)
+                             ) .
+                             '</p></div>';
+                    });
+                    return;
+                }
+    
+                require_once $full_path;
             }
-            require_once WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php';
         }
-
+    
+        // Instantiate the classes dynamically
         $this->product_generator = new WC_Bulk_Product_Generator();
+        $this->order_export = new WC_Bulk_Order_Export();
+        $this->order_import = new WC_Bulk_Order_Import();
     }
+
+    
 
     /**
      * Add the "Dashboard" link next to the "Deactivate" button on the plugin page.
@@ -140,11 +161,11 @@ class WC_Bulk_Order_Generator {
          // Set the default values for all settings.
         $defaults = array(
             'batch_size' => 20,
-            'max_orders' => 1000000,
+            'max_orders' => 10000,
             'date_range' => 90,
             'products_per_order' => 5,
             'product_batch_size' => 20,
-            'max_products' => 1000000      
+            'max_products' => 10000      
         );
 
         $existing_settings = get_option('wc_bulk_generator_settings', array());
@@ -167,11 +188,11 @@ class WC_Bulk_Order_Generator {
     public function sanitize_settings($settings) {
         return array(
             'batch_size' => isset($settings['batch_size']) ? absint($settings['batch_size']) : 20,
-            'max_orders' => isset($settings['max_orders']) ? absint($settings['max_orders']) : 1000000,
+            'max_orders' => isset($settings['max_orders']) ? absint($settings['max_orders']) : 10000,
             'date_range' => isset($settings['date_range']) ? absint($settings['date_range']) : 90,
             'products_per_order' => isset($settings['products_per_order']) ? absint($settings['products_per_order']) : 5,
             'product_batch_size' => isset($settings['product_batch_size']) ? absint($settings['product_batch_size']) : 20,
-            'max_products' => isset($settings['max_products']) ? absint($settings['max_products']) : 1000000,
+            'max_products' => isset($settings['max_products']) ? absint($settings['max_products']) : 10000,
         );
     }
 
@@ -201,17 +222,18 @@ class WC_Bulk_Order_Generator {
         if (!is_plugin_active('woocommerce/woocommerce.php')) {
             ?>
             <div class="notice notice-error is-dismissible">
-                <p>
-                    <?php 
-                    printf(
-                        __('WooCommerce is not installed or active. <strong>%s</strong> may not work correctly.', 'wc-bulk-order-generator'),
-                        'WC Bulk Order Generator'
-                    );
-                    ?>
-                    <a href="<?php echo esc_url(admin_url('plugin-install.php?s=woocommerce&tab=search&type=term')); ?>" class="button button-primary" style="margin-left: 10px;">
-                        <?php _e('Install WooCommerce', 'wc-bulk-order-generator'); ?>
-                    </a>
-                </p>
+            <p>
+                <?php 
+                printf(
+                    esc_html__('WooCommerce is not installed or active. %1$s may not work correctly.', 'wc-bulk-order-generator'),
+                    '<strong>' . esc_html__('WC Bulk Order Generator', 'wc-bulk-order-generator') . '</strong>'
+                );
+                ?>
+                <a href="<?php echo esc_url(admin_url('plugin-install.php?s=woocommerce&tab=search&type=term')); ?>" class="button button-primary" style="margin-left: 10px;">
+                    <?php echo esc_html__('Install WooCommerce', 'wc-bulk-order-generator'); ?>
+                </a>
+            </p>
+
             </div>
             <?php
         }
@@ -234,14 +256,16 @@ class WC_Bulk_Order_Generator {
 
         wp_enqueue_style(
             'wc-order-generator', 
-            WC_BULK_GENERATOR_PLUGIN_URL . 'css/generator.css',
+            // WC_BULK_GENERATOR_PLUGIN_URL . 'css/generator.css',
+            WC_BULK_GENERATOR_PLUGIN_URL . 'build/css/generator.min.css', 
             array(),
             WC_BULK_GENERATOR_VERSION
         );
         
         wp_enqueue_script(
             'wc-order-generator',
-            WC_BULK_GENERATOR_PLUGIN_URL . 'js/generator.js',
+            // WC_BULK_GENERATOR_PLUGIN_URL . 'js/generator.js',
+            WC_BULK_GENERATOR_PLUGIN_URL . 'build/js/generator.min.js', 
             array('jquery'),
             WC_BULK_GENERATOR_VERSION,
             true
@@ -252,9 +276,9 @@ class WC_Bulk_Order_Generator {
         // Ensure all required keys exist with defaults
         $settings = wp_parse_args($settings, array(
             'batch_size' => 20,
-            'max_orders' => 1000000,
+            'max_orders' => 10000,
             'product_batch_size' => 20,
-            'max_products' => 1000000
+            'max_products' => 10000
         ));
 
         wp_localize_script('wc-order-generator', 'wcOrderGenerator', array(
@@ -264,7 +288,9 @@ class WC_Bulk_Order_Generator {
             'batch_size' => $settings['batch_size'],
             'max_orders' => $settings['max_orders'],
             'product_batch_size' => $settings['product_batch_size'],
-            'max_products' => $settings['max_products']
+            'max_products' => $settings['max_products'],
+            'export_nonce' => wp_create_nonce('export_orders_nonce'),
+            'import_nonce' => wp_create_nonce('import_orders_nonce')
         ));
     }
 
@@ -316,10 +342,66 @@ class WC_Bulk_Order_Generator {
     
             <div class="wc-tabs-wrapper">
                 <nav class="nav-tab-wrapper">
-                    <a href="#products" class="nav-tab nav-tab-active"><?php esc_html_e('Products', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#products" class="nav-tab"><?php esc_html_e('Products', 'wc-bulk-order-generator'); ?></a>
                     <a href="#orders" class="nav-tab"><?php esc_html_e('Orders', 'wc-bulk-order-generator'); ?></a>
-                    <a href="#debug" class="nav-tab"><?php esc_html_e('About Me', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#export" class="nav-tab"><?php esc_html_e('Export', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#import" class="nav-tab"><?php esc_html_e('Import', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#about" class="nav-tab"><?php esc_html_e('About Me', 'wc-bulk-order-generator'); ?></a>
                 </nav>
+
+
+                <!-- Products Tab -->
+                <div id="products" class="tab-content">
+                    <form id="product-generator-form" method="post">
+                        <div class="settings-grid">
+                            <div class="setting-card">
+                                <label for="num_products"><?php esc_html_e('Number of Products', 'wc-bulk-order-generator'); ?></label>
+                                <input type="number" id="num_products" name="num_products" 
+                                       value="20" 
+                                       min="1" 
+                                       max="10000">
+                                <p class="description">
+                                    <?php esc_html_e('Generate between 1 and 10k products', 'wc-bulk-order-generator'); ?>
+                                </p>
+                            </div>
+    
+                            <div class="setting-card">
+                                <label for="product_batch_size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
+                                <input type="number" id="product_batch_size" name="product_batch_size" 
+                                       value="10" 
+                                       min="5" 
+                                       max="30">
+                                <p class="description">
+                                    <?php esc_html_e('Products to process per batch (5-30)', 'wc-bulk-order-generator'); ?>
+                                </p>
+                            </div>
+                        </div>
+    
+                        <div class="progress-wrapper">
+                            <div class="product-progress-bar" style="width: 0%"></div>
+                        </div>
+    
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="products-processed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                <div class="stat-label"><?php esc_html_e('Products Created', 'wc-bulk-order-generator'); ?></div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="products-failed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-order-generator'); ?></div>
+                            </div>
+                            
+                        </div>
+    
+                        <div id="product-generation-status" class="notice notice-info" style="display: none;"></div>
+    
+                        <div class="control-buttons">
+                            <input type="submit" id="start-product-generation" class="button button-primary" value="<?php esc_attr_e('Generate Products', 'wc-bulk-order-generator'); ?>">
+                            <button type="button" id="stop-product-generation" class="button" disabled><?php esc_html_e('Stop Generation', 'wc-bulk-order-generator'); ?></button>
+                            <button type="button" id="reset-product-generation" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
+                        </div>
+                    </form>
+                </div>
     
                 <!-- Orders Tab -->
                 <div id="orders" class="tab-content">
@@ -328,27 +410,22 @@ class WC_Bulk_Order_Generator {
                             <div class="setting-card">
                                 <label for="num_orders"><?php esc_html_e('Number of Orders', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="num_orders" name="num_orders" 
-                                       value="100" 
-                                       min="1" 
-                                       max="<?php echo esc_attr($max_orders); ?>">
+                                    value="100" 
+                                    min="1" 
+                                    max="10000">
                                 <p class="description">
-                                    <?php 
-                                    printf(
-                                        esc_html__('Generate between 1 and %s orders', 'wc-bulk-order-generator'), 
-                                        number_format_i18n($max_orders)
-                                    ); 
-                                    ?>
+                                    <?php esc_html_e('Generate between 1 and 10k orders', 'wc-bulk-order-generator'); ?>
                                 </p>
                             </div>
-    
+
                             <div class="setting-card">
                                 <label for="batch_size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="batch_size" name="batch_size" 
-                                       value="<?php echo esc_attr($batch_size); ?>" 
+                                       value="10" 
                                        min="5" 
-                                       max="100">
+                                       max="30">
                                 <p class="description">
-                                    <?php esc_html_e('Orders to process per batch (5-100)', 'wc-bulk-order-generator'); ?>
+                                    <?php esc_html_e('Orders to process per batch (5-30)', 'wc-bulk-order-generator'); ?>
                                 </p>
                             </div>
                         </div>
@@ -397,65 +474,219 @@ class WC_Bulk_Order_Generator {
                     </form>
                 </div>
     
-                <!-- Products Tab -->
-                <div id="products" class="tab-content active">
-                    <form id="product-generator-form" method="post">
-                        <div class="settings-grid">
+
+                <!-- Import and Export  -->
+                <div id="export" class="tab-content">
+                    
+                    <!-- Export section  -->
+                    <div class="export-section">
+                        <h2><?php esc_html_e('Order Export', 'wc-bulk-order-generator'); ?></h2>
+                        <form id="order-export-form">
                             <div class="setting-card">
-                                <label for="num_products"><?php esc_html_e('Number of Products', 'wc-bulk-order-generator'); ?></label>
-                                <input type="number" id="num_products" name="num_products" 
-                                       value="20" 
-                                       min="1" 
-                                       max="1000000">
-                                <p class="description">
-                                    <?php esc_html_e('Generate between 1 and 1,000,000 products', 'wc-bulk-order-generator'); ?>
-                                </p>
+                                <label for="export-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
+                                <input type="number" id="export-batch-size" name="export-batch-size" 
+                                    value="10" min="5" max="30">
+                                <p class="description"><?php esc_html_e('Number of orders to export per batch (5-30)', 'wc-bulk-order-generator'); ?></p>
                             </div>
-    
+
                             <div class="setting-card">
-                                <label for="product_batch_size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
-                                <input type="number" id="product_batch_size" name="product_batch_size" 
-                                       value="10" 
-                                       min="5" 
-                                       max="100">
-                                <p class="description">
-                                    <?php esc_html_e('Products to process per batch (5-50)', 'wc-bulk-order-generator'); ?>
-                                </p>
+                                <label for="export-status"><?php esc_html_e('Order Status', 'wc-bulk-order-generator'); ?></label>
+                                <select id="export-status" name="export-status" multiple>
+                                    <?php
+                                    $order_statuses = wc_get_order_statuses();
+                                    foreach ($order_statuses as $status => $label) {
+                                        echo '<option value="' . esc_attr($status) . '">' . esc_html($label) . '</option>';
+                                    }
+                                    ?>
+                                </select>
                             </div>
-                        </div>
-    
-                        <div class="progress-wrapper">
-                            <div class="product-progress-bar" style="width: 0%"></div>
-                        </div>
-    
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <div class="stat-value" id="products-processed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
-                                <div class="stat-label"><?php esc_html_e('Products Created', 'wc-bulk-order-generator'); ?></div>
+
+                            <div class="progress-wrapper">
+                                <div class="export-progress-bar"></div>
                             </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="products-failed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
-                                <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-order-generator'); ?></div>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="export-total-processed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Total Processed', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="export-success-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Successful', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="export-failed-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-order-generator'); ?></div>
+                                </div>
                             </div>
-                        </div>
-    
-                        <div id="product-generation-status" class="notice notice-info" style="display: none;"></div>
-    
-                        <div class="control-buttons">
-                            <input type="submit" id="start-product-generation" class="button button-primary" value="<?php esc_attr_e('Generate Products', 'wc-bulk-order-generator'); ?>">
-                            <button type="button" id="stop-product-generation" class="button" disabled><?php esc_html_e('Stop Generation', 'wc-bulk-order-generator'); ?></button>
-                            <button type="button" id="reset-product-generation" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
-                        </div>
-                    </form>
-                </div>
-    
-                <!-- Debug Tab -->
-                <div id="debug" class="tab-content">
-                    <div class="debug-info">
-                        <h2><?php esc_html_e('WooCommerce Bulk Product & Order Generator', 'wc-bulk-order-generator'); ?></h2>
-                        <p><?php esc_html_e('Generates bulk orders/products for WooCommerce with optimized batch processing', 'wc-bulk-order-generator'); ?></p>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="export-elapsed-time"><?php esc_html_e('0s', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Elapsed Time', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="export-time-remaining"><?php esc_html_e('--', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Estimated Time Remaining', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="control-buttons">
+                                <input type="submit" id="start-order-export" class="button button-primary" value="<?php esc_attr_e('Export Orders', 'wc-bulk-order-generator'); ?>">
+                                <button type="button" id="reset-order-export" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
+                            </div>
+                        </form>
                     </div>
+
                 </div>
+
+                <div id="import" class="tab-content">
+                    <!-- Import  -->
+                    <div class="import-section">
+                        <form id="order-import-form" enctype="multipart/form-data">
+                            
+                            <table class="form-table enhanced-import-settings">
+                                <tr>
+                                    <th scope="row">
+                                        <label for="import-csv"><?php esc_html_e('CSV File', 'wc-bulk-order-importer'); ?></label>
+                                    </th>
+                                    <td>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" 
+                                                id="import-csv" 
+                                                name="csv_file" 
+                                                accept=".csv" 
+                                                class="file-upload-input" 
+                                                required>
+                                            <div class="file-upload-preview">
+                                                <div class="upload-placeholder">
+                                                    <i class="upload-icon">📤</i>
+                                                    <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="description"><?php esc_html_e('Upload a CSV file with order details', 'wc-bulk-order-importer'); ?></p>
+                                        <div class="file-upload-validation">
+                                            <small><?php esc_html_e('Accepted: .csv | Drag & Drop', 'wc-bulk-order-importer'); ?></small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">
+                                        <label for="import-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-importer'); ?></label>
+                                    </th>
+                                    <td>
+                                        <input type="number" id="import-batch-size" name="batch_size" 
+                                            value="10" min="5" max="30">
+                                        <p class="description"><?php esc_html_e('Number of orders to process per batch (5-30)', 'wc-bulk-order-importer'); ?></p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div class="progress-wrapper">
+                                <div class="import-progress-bar"></div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="import-total-processed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Total Processed', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="import-success-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Successful', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="import-failed-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="import-skipped-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Skipped', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="import-elapsed-time"><?php esc_html_e('0s', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Elapsed Time', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                            </div>
+
+                            <p class="submit">
+                                <input type="submit" class="button button-primary" value="<?php esc_attr_e('Import Orders', 'wc-bulk-order-importer'); ?>">
+                                <button type="button" id="reset-order-import" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
+                            </p>
+                        </form>
+                    </div>
+
+                </div>
+
+            
+                <!-- About Tab -->
+                <div id="about" class="tab-content">
+                    <div class="about-info">
+                        <h2><?php echo esc_html__('WC Bulk Product & Order Generator', 'wc-bulk-order-generator'); ?></h2>
+                        <p><?php echo esc_html__('Generates bulk orders/products for WooCommerce with optimized batch processing', 'wc-bulk-order-generator'); ?></p>
+                    </div>
+
+                    <div class="plugins-section-header">
+                        <h2 class="plugins-section-title"><?php echo esc_html__('Get More Free Plugins', 'wc-bulk-order-generator'); ?></h2>
+                    </div>
+
+                    <div class="plugin-cards-container">
+                        <?php
+                        $plugins = [
+                            [
+                                'icon' => 'forms',
+                                'name' => 'FormDeck',
+                                'description' => 'Simple Form Builder with WhatsApp Floating Forms',
+                                'tags' => ['Free', 'WhatsApp Integration'],
+                                'url' => 'https://wordpress.org/plugins/simple-form/'
+                            ],
+                            [
+                                'icon' => 'shield',
+                                'name' => 'Activity Guard',
+                                'description' => 'Real Time Notifier to Slack for System & User Activity Logs, Forum Tracker and Security',
+                                'tags' => ['Free', 'Pro', 'Slack Integration'],
+                                'url' => 'https://wordpress.org/plugins/notifier-to-slack/'
+                            ],
+                            [
+                                'icon' => 'warning',
+                                'name' => 'EasyError',
+                                'description' => 'Easy Error Log for WordPress',
+                                'tags' => ['Free', 'Error Tracking'],
+                                'url' => 'https://wordpress.org/plugins/easy-error-log/'
+                            ]
+                        ];
+
+                        foreach ($plugins as $plugin) : ?>
+                            <div class="plugin-card">
+                                <div class="plugin-content">
+                                    <div class="plugin-header">
+                                        <div class="plugin-icon">
+                                            <span class="dashicons dashicons-<?php echo esc_attr($plugin['icon']); ?>"></span>
+                                        </div>
+                                        <h3><?php echo esc_html($plugin['name']); ?></h3>
+                                    </div>
+                                    <p><?php echo esc_html($plugin['description']); ?></p>
+                                    <div class="plugin-features">
+                                        <?php foreach ($plugin['tags'] as $tag) : ?>
+                                            <span class="feature-tag"><?php echo esc_html($tag); ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <a href="<?php echo esc_url($plugin['url']); ?>" 
+                                    class="plugin-button" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer">
+                                        <?php echo esc_html__('Learn More', 'wc-bulk-order-generator'); ?>
+                                        <span class="dashicons dashicons-external"></span>
+                                    </a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                </div>
+
+
             </div>
         </div>
         <?php
@@ -508,7 +739,7 @@ class WC_Bulk_Order_Generator {
         $this->disable_emails(null);
         
         // Increase limits for long-running processes
-        set_time_limit(0); // No time limit
+        set_time_limit(0); // No time limit.
         ini_set('memory_limit', '1024M');
         ini_set('max_execution_time', 0);
         
@@ -528,13 +759,17 @@ class WC_Bulk_Order_Generator {
     
         try {
             // Cache products before the loop
-            $available_products = $this->cache_products();
+            $available_products = wp_cache_get('available_products');
+            if (!$available_products) {
+                $available_products = $this->cache_products();
+                wp_cache_set('available_products', $available_products, '', HOUR_IN_SECONDS);
+            }
     
             if (empty($available_products)) {
                 wp_send_json_error('No products found');
                 return;
             }
-
+    
             $max_products_per_order = absint($settings['products_per_order']);
             $date_range = absint($settings['date_range']);
     
@@ -546,14 +781,14 @@ class WC_Bulk_Order_Generator {
                 'AU' => array('NSW', 'VIC', 'QLD', 'WA')
             );
             
-            global $wpdb;
-            
             // Process orders in smaller chunks to prevent timeout
             $chunk_size = min(10, $batch_size);
             $chunks = ceil($batch_size / $chunk_size);
+    
+            global $wpdb;
             
             for ($chunk = 0; $chunk < $chunks; $chunk++) {
-                $wpdb->query('START TRANSACTION');
+                $wpdb->query('START TRANSACTION'); // Begin transaction
                 
                 $current_chunk_size = min($chunk_size, $batch_size - ($chunk * $chunk_size));
                 
@@ -567,16 +802,16 @@ class WC_Bulk_Order_Generator {
                         
                         $order = wc_create_order();
                         
-                        $num_products = rand(1, max(1, $max_products_per_order));
+                        $num_products = wp_rand(1, max(1, $max_products_per_order));
                         $product_keys = array_rand($available_products, $num_products);
                         if (!is_array($product_keys)) {
                             $product_keys = array($product_keys);
                         }
-        
+    
                         $order_total = 0.0;
                         foreach ($product_keys as $key) {
                             $product = $available_products[$key];
-                            $quantity = rand(1, 5);
+                            $quantity = wp_rand(1, 5);
                             $price = (float)$product->get_price();
                             
                             if ($price > 0) {
@@ -584,36 +819,36 @@ class WC_Bulk_Order_Generator {
                                 $order_total += ($price * $quantity);
                             }
                         }
-        
+    
                         $country = $country_codes[array_rand($country_codes)];
                         $state = $states[$country][array_rand($states[$country])];
-        
+    
                         $this->set_customer_details($order, $country, $state);
-        
-                        $date = date('Y-m-d H:i:s', strtotime('-' . rand(0, $date_range) . ' days'));
+    
+                        $date = gmdate('Y-m-d H:i:s', strtotime('-' . wp_rand(0, $date_range) . ' days'));
                         $order->set_date_created($date);
-        
+    
                         $this->set_order_status($order, $date);
-        
+    
                         if ($order_total > 0) {
                             $this->add_shipping_and_tax($order, $order_total, $country);
                         }
-        
+    
                         $payment_methods = array('bacs', 'cheque', 'cod', 'paypal');
                         $order->set_payment_method($payment_methods[array_rand($payment_methods)]);
-        
+    
                         $order->calculate_totals();
                         $order->save();
-        
+    
                         $success_count++;
-        
+    
                     } catch (Exception $e) {
-                        error_log('Order generation error: ' . $e->getMessage());
+                        // error_log('Order generation error: ' . $e->getMessage());
                         $failed_count++;
                     }
                 }
                 
-                $wpdb->query('COMMIT');
+                $wpdb->query('COMMIT'); // Commit transaction
                 
                 // Give the server a small break between chunks
                 if ($chunk < $chunks - 1) {
@@ -627,10 +862,11 @@ class WC_Bulk_Order_Generator {
             ));
     
         } catch (Exception $e) {
-            $wpdb->query('ROLLBACK');
+            $wpdb->query('ROLLBACK'); // Rollback on failure
             wp_send_json_error($e->getMessage());
         }
     }
+    
 
     /**
      * Sets the customer details for an order.
@@ -653,15 +889,15 @@ class WC_Bulk_Order_Generator {
         
         $first_name = $first_names[array_rand($first_names)];
         $last_name = $last_names[array_rand($last_names)];
-        $address = rand(100, 9999) . ' ' . array_rand(array('Main St' => 1, 'Oak Ave' => 1, 'Market St' => 1));
+        $address = wp_rand(100, 9999) . ' ' . array_rand(array('Main St' => 1, 'Oak Ave' => 1, 'Market St' => 1));
         $city = array_rand(array('New York' => 1, 'Los Angeles' => 1, 'Chicago' => 1, 'Houston' => 1));
-        $postcode = sprintf('%05d', rand(100000, 999999));
+        $postcode = sprintf('%05d', wp_rand(100000, 999999));
         
         $address_data = array(
             'first_name' => $first_name,
             'last_name'  => $last_name,
             'address_1'  => $address,
-            'address_2'  => rand(0, 1) ? 'Apt ' . rand(10000, 99999) : '',
+            'address_2'  => wp_rand(0, 1) ? 'Apt ' . wp_rand(10000, 99999) : '',
             'city'       => $city,
             'state'      => $state,
             'postcode'   => $postcode,
@@ -669,8 +905,8 @@ class WC_Bulk_Order_Generator {
         );
 
         $billing_data = array_merge($address_data, array(
-            'email' => strtolower($first_name . '.' . $last_name . rand(1000000, 9999999) . '@example.com'),
-            'phone' => sprintf('(%d) %d-%d', rand(2000, 9999), rand(2000, 9999), rand(1000000, 9999999))
+            'email' => strtolower($first_name . '.' . $last_name . wp_rand(10000, 9999999) . '@example.com'),
+            'phone' => sprintf('(%d) %d-%d', wp_rand(2000, 9999), wp_rand(2000, 9999), wp_rand(10000, 9999999))
         ));
 
         foreach ($billing_data as $key => $value) {
@@ -725,7 +961,7 @@ class WC_Bulk_Order_Generator {
         }
 
         // Choose status based on weighted probability
-        $rand = rand(1, 100);
+        $rand = wp_rand(1, 100);
         $cumulative = 0;
         foreach ($statuses as $status => $probability) {
             $cumulative += $probability;
@@ -760,7 +996,7 @@ class WC_Bulk_Order_Generator {
         
         $method = array_rand($shipping_methods);
         $range = $shipping_methods[$method];
-        $shipping_cost = (float)rand($range[0], $range[1]);
+        $shipping_cost = (float)wp_rand($range[0], $range[1]);
         
         if ($shipping_cost > 0) {
             $item = new WC_Order_Item_Shipping();
@@ -770,7 +1006,7 @@ class WC_Bulk_Order_Generator {
         }
 
         if (in_array($country, array('US', 'CA', 'GB', 'AU'))) {
-            $tax_rate = (float)rand(5, 20) / 100;
+            $tax_rate = (float)wp_rand(5, 20) / 100;
             $tax_total = (float)$order_total * $tax_rate;
             $order->set_cart_tax($tax_total);
         }
@@ -791,6 +1027,7 @@ class WC_Bulk_Order_Generator {
         check_ajax_referer('generate_orders_nonce', 'nonce');
         wp_send_json_success();
     }
+
 }
 
 /**
