@@ -54,8 +54,6 @@ class WC_Bulk_Order_Export {
             'total_orders' => $total_orders
         ]);
     }
-
-    
     
     public function export_order_batch() {
         check_ajax_referer('export_orders_nonce', 'nonce');
@@ -112,7 +110,11 @@ class WC_Bulk_Order_Export {
                 'Customer Name', 
                 'Customer Email',
                 'Shipping Method',
-                'Payment Method'
+                'Payment Method',
+                'Product ID',
+                'Product Name',
+                'Product Price',
+                'Quantity'
             ]);
         }
     
@@ -131,16 +133,46 @@ class WC_Bulk_Order_Export {
                 // Get payment method
                 $payment_method = $order->get_payment_method_title();
     
-                fputcsv($fp, [
-                    $order->get_id(),
-                    $order->get_date_created()->format('Y-m-d H:i:s'),
-                    $order->get_status(),
-                    $order->get_total(),
-                    $order->get_formatted_billing_full_name(),
-                    $order->get_billing_email(),
-                    $shipping_method,
-                    $payment_method
-                ]);
+                // Get order items
+                $order_items = $order->get_items();
+    
+                // If no items, export order with empty product details
+                if (empty($order_items)) {
+                    fputcsv($fp, [
+                        $order->get_id(),
+                        $order->get_date_created()->format('Y-m-d H:i:s'),
+                        $order->get_status(),
+                        $order->get_total(),
+                        $order->get_formatted_billing_full_name(),
+                        $order->get_billing_email(),
+                        $shipping_method,
+                        $payment_method,
+                        '',
+                        '',
+                        '',
+                        ''
+                    ]);
+                } else {
+                    // Export each product in the order
+                    foreach ($order_items as $item) {
+                        $product = $item->get_product();
+                        fputcsv($fp, [
+                            $order->get_id(),
+                            $order->get_date_created()->format('Y-m-d H:i:s'),
+                            $order->get_status(),
+                            $order->get_total(),
+                            $order->get_formatted_billing_full_name(),
+                            $order->get_billing_email(),
+                            $shipping_method,
+                            $payment_method,
+                            $product ? $product->get_id() : '',
+                            $item->get_name(),
+                            $item->get_total() / $item->get_quantity(),
+                            $item->get_quantity()
+                        ]);
+                    }
+                }
+    
                 $success_count++;
             } catch (Exception $e) {
                 $failed_count++;
@@ -168,7 +200,6 @@ class WC_Bulk_Order_Export {
             'download_url' => $download_url
         ]);
     }
-    
 }
 
 // Initialize the product generator
