@@ -569,10 +569,15 @@ class WC_Bulk_Order_Generator {
                                     <div class="stat-value" id="import-skipped-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
                                     <div class="stat-label"><?php esc_html_e('Skipped', 'wc-bulk-order-generator'); ?></div>
                                 </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="import-elapsed-time"><?php esc_html_e('0s', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Elapsed Time', 'wc-bulk-order-generator'); ?></div>
+                                </div>
                             </div>
 
                             <p class="submit">
                                 <input type="submit" class="button button-primary" value="<?php esc_attr_e('Import Orders', 'wc-bulk-order-importer'); ?>">
+                                <button type="button" id="reset-order-import" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
                             </p>
                         </form>
                     </div>
@@ -1212,6 +1217,19 @@ class WC_Bulk_Order_Generator {
     
         foreach ($orders as $order_data) {
             try {
+                // Check if order with this custom order number already exists
+                $existing_orders = wc_get_orders([
+                    'meta_key' => '_order_number',
+                    'meta_value' => $order_data['order_id'],
+                    'numberposts' => 1
+                ]);
+    
+                // Skip if order already exists
+                if (!empty($existing_orders)) {
+                    $skipped++;
+                    continue;
+                }
+    
                 // Create a new WooCommerce order
                 $order = wc_create_order([
                     'status' => $order_data['status']
@@ -1245,10 +1263,10 @@ class WC_Bulk_Order_Generator {
     
                 // Set shipping method if provided
                 if (!empty($order_data['shipping_method'])) {
-                    $shipping_rate = new WC_Shipping_Rate();
-                    $shipping_rate->set_id($order_data['shipping_method']);
-                    $shipping_rate->set_cost($order_data['total']); 
-                    $order->add_shipping($shipping_rate);
+                    $shipping_item = new WC_Order_Item_Shipping();
+                    $shipping_item->set_method_title($order_data['shipping_method']);
+                    $shipping_item->set_total($order_data['total']); 
+                    $order->add_item($shipping_item);
                 }
     
                 // Set payment method if provided

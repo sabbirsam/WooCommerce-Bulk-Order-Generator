@@ -561,6 +561,7 @@ jQuery(document).ready(function($) {
         $('#export-time-remaining').text('--');
         $('#start-order-export').prop('disabled', false);
     });
+   
 });
 
 
@@ -578,6 +579,7 @@ jQuery(document).ready(function($) {
         var startTime = Date.now();
         var totalOrders = 0;
         var currentBatch = 0;
+        var totalImportedCount = 0;
 
         function processNextBatch(formData) {
             $.ajax({
@@ -593,11 +595,12 @@ jQuery(document).ready(function($) {
                         
                         totalOrders = response.data.total_orders;
                         currentBatch = response.data.current_batch;
+                        totalImportedCount += response.data.successful;
 
                         $('#import-total-processed').text(
                             Math.min(totalOrders, (currentBatch + 1) * 50)
                         );
-                        $('#import-success-count').text(response.data.successful);
+                        $('#import-success-count').text(totalImportedCount);
                         $('#import-failed-count').text(response.data.failed);
                         $('#import-skipped-count').text(response.data.skipped);
                         $('#import-elapsed-time').text(elapsedTime + 's');
@@ -606,9 +609,12 @@ jQuery(document).ready(function($) {
                         var progressPercentage = Math.floor(
                             ((currentBatch + 1) * 50 / totalOrders) * 100
                         );
-                        $('.import-progress-bar').css('width', 
-                            Math.min(progressPercentage, 100) + '%'
-                        );
+                        $('.import-progress-bar').css({
+                            'width': Math.min(progressPercentage, 100) + '%',
+                            'background-color': 'blue',
+                            'height': '25px',
+                            'transition': 'width 0.5s ease-in-out'
+                        });
 
                         // Check if import is complete
                         if (response.data.is_complete) {
@@ -639,4 +645,14 @@ jQuery(document).ready(function($) {
         // Start batch processing
         processNextBatch(formData);
     });
+
+     // Reset buttons
+     $('#reset-order-import').on('click', function() {
+        exportIsGenerating = false;
+        $('.import-progress-bar').css('width', '0%');
+        $('#import-total-processed, #import-success-count, #import-failed-count').text('0');
+        $('#import-elapsed-time').text('0s');
+        // $('#import-csv').text('0s');
+    });
+
 });
