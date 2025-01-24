@@ -1,13 +1,5 @@
 // --------------Order -------------------------------------
 jQuery(document).ready(function($) {
-    // Tab switching functionality
-    $('.nav-tab').on('click', function(e) {
-        e.preventDefault();
-        $('.nav-tab').removeClass('nav-tab-active');
-        $(this).addClass('nav-tab-active');
-        $('.tab-content').removeClass('active');
-        $($(this).attr('href')).addClass('active');
-    });
 
     if (!$('#toast-container').length) {
         $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
@@ -247,6 +239,9 @@ jQuery(document).ready(function($) {
 
 
 
+
+
+
 //------------------------------ Product ----------------------------------
 
 jQuery(document).ready(function($) {
@@ -423,3 +418,150 @@ jQuery(document).ready(function($) {
 
     
 });
+
+
+
+// Tabs ----------------------------------------
+jQuery(document).ready(function($) {
+     // Tab switching functionality
+     $('.nav-tab').on('click', function(e) {
+        e.preventDefault();
+        $('.nav-tab').removeClass('nav-tab-active');
+        $(this).addClass('nav-tab-active');
+        $('.tab-content').removeClass('active');
+        $($(this).attr('href')).addClass('active');
+    });
+});
+
+
+//export ----------------------------------------
+
+jQuery(document).ready(function($) {
+    let exportIsGenerating = false;
+    let exportTotalOrders = 0;
+    let exportStartTime = 0;
+
+    // Always set export all to true by default
+    $('#export-all').prop('checked', true);
+
+    $('#order-export-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const batchSize = parseInt($('#export-batch-size').val());
+        const exportAll = true; // Always export all orders
+        const statuses = $('#export-status').val() || [];
+                
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'start_order_export',
+                nonce: wcOrderGenerator.export_nonce,
+                batch_size: batchSize,
+                export_all: exportAll,
+                statuses: statuses
+            },
+            success: function(response) {
+                if (response.success) {
+                    exportIsGenerating = true;
+                    exportTotalOrders = response.data.total_orders;
+                    exportStartTime = Date.now();
+                    
+                    // Disable export button during process
+                    $('#start-order-export').prop('disabled', true);
+                    
+                    processExportBatch(0, response.data.export_session);
+                } else {
+                    alert('Export initialization failed: ' + response.data);
+                }
+            }
+        });
+    });
+
+    function processExportBatch(batchNumber, exportSession) {
+        const batchSize = parseInt($('#export-batch-size').val());
+        const statuses = $('#export-status').val() || [];
+        const totalBatches = Math.ceil(exportTotalOrders / batchSize);
+        
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'export_order_batch',
+                nonce: wcOrderGenerator.export_nonce,
+                batch_size: batchSize,
+                batch_number: batchNumber,
+                total_batches: totalBatches,
+                export_all: true,
+                statuses: statuses,
+                export_session: exportSession
+            },
+            success: function(response) {
+                if (response.success) {
+                    const processed = (batchNumber + 1) * batchSize;
+                    updateExportProgress(
+                        Math.min(processed, exportTotalOrders), 
+                        response.data.success, 
+                        response.data.failed
+                    );
+                    
+                    if (!response.data.is_last_batch) {
+                        processExportBatch(batchNumber + 1, exportSession);
+                    } else {
+                        exportIsGenerating = false;
+                        $('#start-order-export').prop('disabled', false);
+                        
+                        // Trigger file download
+                        window.location.href = response.data.download_url;
+                    }
+                } else {
+                    alert('Export batch failed: ' + response.data);
+                }
+            }
+        });
+    }
+
+    function updateExportProgress(processed, success, failed) {
+        const percentage = (processed / exportTotalOrders) * 100;
+        
+        // Ensure progress bar width is set correctly
+        $('.export-progress-bar').css({
+            'width': percentage + '%',
+            'background-color': 'blue',
+            'height': '25px',
+            'transition': 'width 0.5s ease-in-out'
+        });
+
+        $('#export-total-processed').text(processed);
+        $('#export-success-count').text(success);
+        $('#export-failed-count').text(failed);
+        
+        const elapsedTime = Date.now() - exportStartTime;
+        $('#export-elapsed-time').text(formatDuration(elapsedTime));
+        
+        const ordersPerSecond = processed / (elapsedTime / 1000);
+        const remainingOrders = exportTotalOrders - processed;
+        const estimatedSecondsRemaining = remainingOrders / ordersPerSecond;
+        $('#export-time-remaining').text(formatDuration(estimatedSecondsRemaining * 1000));
+    }
+
+    function formatDuration(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    }
+
+    // Reset buttons
+    $('#reset-order-export').on('click', function() {
+        exportIsGenerating = false;
+        $('.export-progress-bar').css('width', '0%');
+        $('#export-total-processed, #export-success-count, #export-failed-count').text('0');
+        $('#export-elapsed-time').text('0s');
+        $('#export-time-remaining').text('--');
+        $('#start-order-export').prop('disabled', false);
+    });
+});
+
+
+
