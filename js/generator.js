@@ -565,3 +565,78 @@ jQuery(document).ready(function($) {
 
 
 
+// Import 
+jQuery(document).ready(function($) {
+    $('#order-import-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        formData.append('action', 'import_orders');
+        formData.append('nonce', wcOrderGenerator.import_nonce);
+        formData.append('current_batch', 0);
+
+        var startTime = Date.now();
+        var totalOrders = 0;
+        var currentBatch = 0;
+
+        function processNextBatch(formData) {
+            $.ajax({
+                url: wcOrderGenerator.ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        var endTime = Date.now();
+                        var elapsedTime = Math.floor((endTime - startTime) / 1000);
+                        
+                        totalOrders = response.data.total_orders;
+                        currentBatch = response.data.current_batch;
+
+                        $('#import-total-processed').text(
+                            Math.min(totalOrders, (currentBatch + 1) * 50)
+                        );
+                        $('#import-success-count').text(response.data.successful);
+                        $('#import-failed-count').text(response.data.failed);
+                        $('#import-skipped-count').text(response.data.skipped);
+                        $('#import-elapsed-time').text(elapsedTime + 's');
+
+                        // Update progress bar
+                        var progressPercentage = Math.floor(
+                            ((currentBatch + 1) * 50 / totalOrders) * 100
+                        );
+                        $('.import-progress-bar').css('width', 
+                            Math.min(progressPercentage, 100) + '%'
+                        );
+
+                        // Check if import is complete
+                        if (response.data.is_complete) {
+                            alert('Import completed successfully!');
+                            return;
+                        }
+
+                        // Prepare next batch
+                        var nextBatchData = new FormData();
+                        nextBatchData.append('action', 'import_orders');
+                        nextBatchData.append('nonce', wcOrderGenerator.import_nonce);
+                        nextBatchData.append('current_batch', currentBatch + 1);
+                        nextBatchData.append('csv_file', formData.get('csv_file'));
+                        nextBatchData.append('batch_size', formData.get('batch_size'));
+
+                        // Process next batch
+                        processNextBatch(nextBatchData);
+                    } else {
+                        alert('Import failed: ' + response.data);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred during import');
+                }
+            });
+        }
+
+        // Start batch processing
+        processNextBatch(formData);
+    });
+});

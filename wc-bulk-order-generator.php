@@ -86,6 +86,8 @@ class WC_Bulk_Order_Generator {
 
         add_action('wp_ajax_start_order_export', [$this, 'start_order_export']);
         add_action('wp_ajax_export_order_batch', [$this, 'export_order_batch']);
+
+        add_action('wp_ajax_import_orders', [$this, 'handle_order_import']);
          
 
     }
@@ -269,8 +271,8 @@ class WC_Bulk_Order_Generator {
             'max_orders' => $settings['max_orders'],
             'product_batch_size' => $settings['product_batch_size'],
             'max_products' => $settings['max_products'],
-            
             'export_nonce' => wp_create_nonce('export_orders_nonce'),
+            'import_nonce' => wp_create_nonce('import_orders_nonce')
         ));
     }
 
@@ -523,23 +525,31 @@ class WC_Bulk_Order_Generator {
                 <div id="import" class="tab-content">
                     <!-- Import  -->
                     <div class="import-section">
-                        <h2><?php esc_html_e('Order Import', 'wc-bulk-order-generator'); ?></h2>
                         <form id="order-import-form" enctype="multipart/form-data">
-                            <div class="setting-card">
-                                <label for="import-csv"><?php esc_html_e('Select CSV File', 'wc-bulk-order-generator'); ?></label>
-                                <input type="file" id="import-csv" name="import-csv" accept=".csv">
-                                <p class="description"><?php esc_html_e('Upload a CSV file with order details', 'wc-bulk-order-generator'); ?></p>
-                            </div>
-
-                            <div class="setting-card">
-                                <label for="import-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
-                                <input type="number" id="import-batch-size" name="import-batch-size" 
-                                    value="50" min="5" max="500">
-                                <p class="description"><?php esc_html_e('Number of orders to process per batch (5-500)', 'wc-bulk-order-generator'); ?></p>
-                            </div>
+                            <table class="form-table">
+                                <tr>
+                                    <th scope="row">
+                                        <label for="import-csv"><?php esc_html_e('CSV File', 'wc-bulk-order-importer'); ?></label>
+                                    </th>
+                                    <td>
+                                        <input type="file" id="import-csv" name="csv_file" accept=".csv" required>
+                                        <p class="description"><?php esc_html_e('Upload a CSV file with order details', 'wc-bulk-order-importer'); ?></p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">
+                                        <label for="import-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-importer'); ?></label>
+                                    </th>
+                                    <td>
+                                        <input type="number" id="import-batch-size" name="batch_size" 
+                                            value="50" min="5" max="500">
+                                        <p class="description"><?php esc_html_e('Number of orders to process per batch (5-500)', 'wc-bulk-order-importer'); ?></p>
+                                    </td>
+                                </tr>
+                            </table>
 
                             <div class="progress-wrapper">
-                                <div class="import-progress-bar" style="width: 0%"></div>
+                                <div class="import-progress-bar"></div>
                             </div>
 
                             <div class="stats-grid">
@@ -555,32 +565,15 @@ class WC_Bulk_Order_Generator {
                                     <div class="stat-value" id="import-failed-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
                                     <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-order-generator'); ?></div>
                                 </div>
-
                                 <div class="stat-card">
                                     <div class="stat-value" id="import-skipped-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
                                     <div class="stat-label"><?php esc_html_e('Skipped', 'wc-bulk-order-generator'); ?></div>
                                 </div>
-
                             </div>
 
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-value" id="import-elapsed-time"><?php esc_html_e('0s', 'wc-bulk-order-generator'); ?></div>
-                                    <div class="stat-label"><?php esc_html_e('Elapsed Time', 'wc-bulk-order-generator'); ?></div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="import-time-remaining"><?php esc_html_e('--', 'wc-bulk-order-generator'); ?></div>
-                                    <div class="stat-label"><?php esc_html_e('Estimated Time Remaining', 'wc-bulk-order-generator'); ?></div>
-                                </div>
-                            </div>
-
-                            <div id="current-import-order" class="current-processing-info"></div>
-
-                            <div class="control-buttons">
-                                <input type="submit" id="start-order-import" class="button button-primary" value="<?php esc_attr_e('Import Orders', 'wc-bulk-order-generator'); ?>">
-                                <button type="button" id="stop-order-import" class="button" disabled><?php esc_html_e('Stop Import', 'wc-bulk-order-generator'); ?></button>
-                                <button type="button" id="reset-order-import" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
-                            </div>
+                            <p class="submit">
+                                <input type="submit" class="button button-primary" value="<?php esc_attr_e('Import Orders', 'wc-bulk-order-importer'); ?>">
+                            </p>
                         </form>
                     </div>
 
@@ -1152,6 +1145,134 @@ class WC_Bulk_Order_Generator {
             'download_url' => $download_url
         ]);
     }
+
+
+    // Import 
+    public function handle_order_import() {
+        check_ajax_referer('import_orders_nonce', 'nonce');
+    
+        // Process uploaded CSV
+        if (!isset($_FILES['csv_file'])) {
+            wp_send_json_error('No file uploaded');
+        }
+    
+        $file = $_FILES['csv_file']['tmp_name'];
+        $batch_size = intval($_POST['batch_size'] ?? 50);
+        $current_batch = intval($_POST['current_batch'] ?? 0);
+    
+        $orders = $this->parse_csv($file);
+        $total_orders = count($orders);
+    
+        // Calculate the slice of orders for this batch
+        $batch_orders = array_slice($orders, $current_batch * $batch_size, $batch_size);
+    
+        $results = $this->process_orders($batch_orders);
+    
+        // Determine if more batches are needed
+        $is_complete = ($current_batch * $batch_size + count($batch_orders)) >= $total_orders;
+    
+        wp_send_json_success([
+            'processed' => count($batch_orders),
+            'successful' => $results['successful'],
+            'failed' => $results['failed'],
+            'skipped' => $results['skipped'],
+            'total_orders' => $total_orders,
+            'current_batch' => $current_batch,
+            'is_complete' => $is_complete
+        ]);
+    }
+
+    private function parse_csv($file) {
+        $orders = [];
+        if (($handle = fopen($file, "r")) !== FALSE) {
+            // Skip header
+            fgetcsv($handle);
+            
+            while (($data = fgetcsv($handle)) !== FALSE) {
+                $orders[] = [
+                    'order_id' => $data[0],
+                    'date' => $data[1],
+                    'status' => $data[2],
+                    'total' => $data[3],
+                    'customer_name' => $data[4],
+                    'customer_email' => $data[5],
+                    'shipping_method' => $data[6],
+                    'payment_method' => $data[7]
+                ];
+            }
+            fclose($handle);
+        }
+        return $orders;
+    }
+
+    private function process_orders($orders) {
+        $successful = 0;
+        $failed = 0;
+        $skipped = 0;
+    
+        foreach ($orders as $order_data) {
+            try {
+                // Create a new WooCommerce order
+                $order = wc_create_order([
+                    'status' => $order_data['status']
+                ]);
+    
+                // Set custom order number
+                update_post_meta($order->get_id(), '_order_number', $order_data['order_id']);
+    
+                // Set order data
+                $order->set_date_created(wc_string_to_timestamp($order_data['date']));
+                $order->set_total($order_data['total']);
+    
+                // Create or find customer
+                $customer_id = email_exists($order_data['customer_email']);
+                if (!$customer_id) {
+                    $customer_id = wc_create_new_customer(
+                        $order_data['customer_email'], 
+                        sanitize_user(explode('@', $order_data['customer_email'])[0]),
+                        wp_generate_password()
+                    );
+                }
+    
+                // Set customer
+                $order->set_customer_id($customer_id);
+    
+                // Set billing and shipping details
+                $name_parts = explode(' ', $order_data['customer_name'], 2);
+                $order->set_billing_first_name($name_parts[0]);
+                $order->set_billing_last_name($name_parts[1] ?? '');
+                $order->set_billing_email($order_data['customer_email']);
+    
+                // Set shipping method if provided
+                if (!empty($order_data['shipping_method'])) {
+                    $shipping_rate = new WC_Shipping_Rate();
+                    $shipping_rate->set_id($order_data['shipping_method']);
+                    $shipping_rate->set_cost($order_data['total']); 
+                    $order->add_shipping($shipping_rate);
+                }
+    
+                // Set payment method if provided
+                if (!empty($order_data['payment_method'])) {
+                    $order->set_payment_method($order_data['payment_method']);
+                }
+    
+                // Save the order
+                $order->save();
+    
+                $successful++;
+            } catch (Exception $e) {
+                error_log('Order import error: ' . $e->getMessage());
+                $failed++;
+            }
+        }
+    
+        return [
+            'successful' => $successful,
+            'failed' => $failed,
+            'skipped' => $skipped
+        ];
+    }
+
 
 
 }
