@@ -1,3 +1,53 @@
+
+// Tabs ----------------------------------------
+jQuery(document).ready(function($) {
+    // Check localStorage for the last active tab
+    let activeTab = localStorage.getItem('activeTab');
+
+    if (activeTab) {
+        // Set the saved active tab
+        $('.nav-tab').removeClass('nav-tab-active');
+        $('.tab-content').removeClass('active');
+
+        $(`.nav-tab[href="${activeTab}"]`).addClass('nav-tab-active');
+        $(activeTab).addClass('active');
+    } else {
+        // Default to the first tab if no active tab is saved
+        $('.nav-tab').first().addClass('nav-tab-active');
+        $('.tab-content').first().addClass('active');
+    }
+
+    // Tab switching functionality
+    $('.nav-tab').on('click', function(e) {
+        e.preventDefault();
+        
+        // Set clicked tab as active
+        $('.nav-tab').removeClass('nav-tab-active');
+        $(this).addClass('nav-tab-active');
+        $('.tab-content').removeClass('active');
+        $($(this).attr('href')).addClass('active');
+
+        // Save the active tab to localStorage
+        localStorage.setItem('activeTab', $(this).attr('href'));
+    });
+});
+
+// CSV importer ---------------------------------
+jQuery(document).ready(function($) {
+    $('.file-upload-input').on('change', function(e) {
+        const file = e.target.files[0];
+        const $preview = $('.file-upload-preview');
+        
+        if (file) {
+            $preview.html(` 
+                <div class="file-name-display">
+                    📄 ${file.name}
+                </div>
+            `);
+        }
+    });
+});
+
 // --------------Order -------------------------------------
 jQuery(document).ready(function($) {
 
@@ -421,18 +471,6 @@ jQuery(document).ready(function($) {
 
 
 
-// Tabs ----------------------------------------
-jQuery(document).ready(function($) {
-     // Tab switching functionality
-     $('.nav-tab').on('click', function(e) {
-        e.preventDefault();
-        $('.nav-tab').removeClass('nav-tab-active');
-        $(this).addClass('nav-tab-active');
-        $('.tab-content').removeClass('active');
-        $($(this).attr('href')).addClass('active');
-    });
-});
-
 
 //export ----------------------------------------
 
@@ -636,6 +674,31 @@ jQuery(document).ready(function($) {
 
     $('#order-import-form').on('submit', function (e) {
         e.preventDefault();
+
+        const csvFile = $('.file-upload-input')[0].files[0];
+        
+        // Validate file type and extension
+        if (!csvFile) {
+            showToast('Please select a CSV file', 'warning');
+            e.preventDefault();
+            return false;
+        }
+
+        const allowedTypes = ['text/csv', 'application/vnd.ms-excel'];
+        const validExtension = csvFile.name.toLowerCase().endsWith('.csv');
+
+        if (!allowedTypes.includes(csvFile.type) || !validExtension) {
+            showToast('Invalid file type. Please upload a .csv file', 'error');
+            e.preventDefault();
+            return false;
+        }
+
+        // Additional size check (optional)
+        if (csvFile.size > 5 * 1024 * 1024) {
+            showToast('File size exceeds 5MB limit', 'warning');
+            e.preventDefault();
+            return false;
+        }
     
         var formData = new FormData(this);
         formData.append('action', 'import_orders');
@@ -709,11 +772,20 @@ jQuery(document).ready(function($) {
     
 
      // Reset buttons
-     $('#reset-order-import').on('click', function() {
+    $('#reset-order-import').on('click', function() {
         exportIsGenerating = false;
         $('.import-progress-bar').css('width', '0%');
         $('#import-total-processed, #import-success-count, #import-failed-count').text('0');
         $('#import-elapsed-time').text('0s');
+        
+        // Reset file upload
+        $('.file-upload-input').val('');
+        $('.file-upload-preview').html(`
+            <div class="upload-placeholder">
+                <i class="upload-icon">📤</i>
+                <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
+            </div>
+        `);
     });
 
 });

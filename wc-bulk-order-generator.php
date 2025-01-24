@@ -256,14 +256,16 @@ class WC_Bulk_Order_Generator {
 
         wp_enqueue_style(
             'wc-order-generator', 
-            WC_BULK_GENERATOR_PLUGIN_URL . 'css/generator.css',
+            // WC_BULK_GENERATOR_PLUGIN_URL . 'css/generator.css',
+            WC_BULK_GENERATOR_PLUGIN_URL . 'build/css/generator.min.css', 
             array(),
             WC_BULK_GENERATOR_VERSION
         );
         
         wp_enqueue_script(
             'wc-order-generator',
-            WC_BULK_GENERATOR_PLUGIN_URL . 'js/generator.js',
+            // WC_BULK_GENERATOR_PLUGIN_URL . 'js/generator.js',
+            WC_BULK_GENERATOR_PLUGIN_URL . 'build/js/generator.min.js', 
             array('jquery'),
             WC_BULK_GENERATOR_VERSION,
             true
@@ -340,7 +342,7 @@ class WC_Bulk_Order_Generator {
     
             <div class="wc-tabs-wrapper">
                 <nav class="nav-tab-wrapper">
-                    <a href="#products" class="nav-tab nav-tab-active"><?php esc_html_e('Products', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#products" class="nav-tab"><?php esc_html_e('Products', 'wc-bulk-order-generator'); ?></a>
                     <a href="#orders" class="nav-tab"><?php esc_html_e('Orders', 'wc-bulk-order-generator'); ?></a>
                     <a href="#export" class="nav-tab"><?php esc_html_e('Export', 'wc-bulk-order-generator'); ?></a>
                     <a href="#import" class="nav-tab"><?php esc_html_e('Import', 'wc-bulk-order-generator'); ?></a>
@@ -349,7 +351,7 @@ class WC_Bulk_Order_Generator {
 
 
                 <!-- Products Tab -->
-                <div id="products" class="tab-content active">
+                <div id="products" class="tab-content">
                     <form id="product-generator-form" method="post">
                         <div class="settings-grid">
                             <div class="setting-card">
@@ -542,14 +544,31 @@ class WC_Bulk_Order_Generator {
                     <!-- Import  -->
                     <div class="import-section">
                         <form id="order-import-form" enctype="multipart/form-data">
-                            <table class="form-table">
+                            
+                            <table class="form-table enhanced-import-settings">
                                 <tr>
                                     <th scope="row">
                                         <label for="import-csv"><?php esc_html_e('CSV File', 'wc-bulk-order-importer'); ?></label>
                                     </th>
                                     <td>
-                                        <input type="file" id="import-csv" name="csv_file" accept=".csv" required>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" 
+                                                id="import-csv" 
+                                                name="csv_file" 
+                                                accept=".csv" 
+                                                class="file-upload-input" 
+                                                required>
+                                            <div class="file-upload-preview">
+                                                <div class="upload-placeholder">
+                                                    <i class="upload-icon">📤</i>
+                                                    <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <p class="description"><?php esc_html_e('Upload a CSV file with order details', 'wc-bulk-order-importer'); ?></p>
+                                        <div class="file-upload-validation">
+                                            <small><?php esc_html_e('Accepted: .csv | Drag & Drop', 'wc-bulk-order-importer'); ?></small>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr>
