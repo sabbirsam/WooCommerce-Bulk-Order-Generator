@@ -59,6 +59,8 @@ class WC_Bulk_Order_Generator {
      * @var WC_Bulk_Product_Generator
      */
     private $product_generator;
+    private $order_export;
+    private $order_import;
 
     /**
      * WC_Bulk_Order_Generator constructor.
@@ -84,33 +86,47 @@ class WC_Bulk_Order_Generator {
         // Add custom plugin action links (Dashboard link).
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array($this, 'add_dashboard_link'));
 
-        add_action('wp_ajax_start_order_export', [$this, 'start_order_export']);
-        add_action('wp_ajax_export_order_batch', [$this, 'export_order_batch']);
-
-        add_action('wp_ajax_import_orders', [$this, 'handle_order_import']);
-         
-
     }
 
     /**
      * Initializes dependencies for the class, specifically the product generator.
      * Ensures the required file is included and the product generator instance is created.
      */
+   
     private function init_dependencies() {
-        if (!class_exists('WC_Bulk_Product_Generator')) {
-            if (!file_exists(WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php')) {
-                add_action('admin_notices', function() {
-                    echo '<div class="notice notice-error"><p>' . 
-                         esc_html__('Bulk Order Generator: Required file "class-wc-bulk-product-generator.php" is missing.', 'wc-bulk-order-generator') . 
-                         '</p></div>';
-                });
-                return;
+        $dependencies = [
+            'WC_Bulk_Product_Generator' => 'includes/class-wc-bulk-product-generator.php',
+            'WC_Bulk_Order_Export' => 'includes/class-wc-bulk-order-export.php',
+            'WC_Bulk_Order_Import' => 'includes/class-wc-bulk-order-import.php',
+        ];
+    
+        foreach ($dependencies as $class_name => $file_path) {
+            if (!class_exists($class_name)) {
+                $full_path = WC_BULK_GENERATOR_PLUGIN_DIR . $file_path;
+    
+                if (!file_exists($full_path)) {
+                    add_action('admin_notices', function() use ($file_path) {
+                        echo '<div class="notice notice-error"><p>' .
+                             sprintf(
+                                 esc_html__('Bulk Order Generator: Required file "%s" is missing.', 'wc-bulk-order-generator'),
+                                 esc_html($file_path)
+                             ) .
+                             '</p></div>';
+                    });
+                    return;
+                }
+    
+                require_once $full_path;
             }
-            require_once WC_BULK_GENERATOR_PLUGIN_DIR . 'includes/class-wc-bulk-product-generator.php';
         }
-
+    
+        // Instantiate the classes dynamically
         $this->product_generator = new WC_Bulk_Product_Generator();
+        $this->order_export = new WC_Bulk_Order_Export();
+        $this->order_import = new WC_Bulk_Order_Import();
     }
+
+    
 
     /**
      * Add the "Dashboard" link next to the "Deactivate" button on the plugin page.
@@ -992,306 +1008,6 @@ class WC_Bulk_Order_Generator {
         check_ajax_referer('generate_orders_nonce', 'nonce');
         wp_send_json_success();
     }
-
-    // Export 
-    public function start_order_export() {
-        check_ajax_referer('export_orders_nonce', 'nonce');
-    
-        if (!current_user_can('manage_woocommerce')) {
-            wp_send_json_error('Insufficient permissions');
-            return;
-        }
-    
-        $export_all = isset($_POST['export_all']) ? filter_var($_POST['export_all'], FILTER_VALIDATE_BOOLEAN) : false;
-        $date_from = $export_all ? null : sanitize_text_field($_POST['date_from']);
-        $date_to = $export_all ? null : sanitize_text_field($_POST['date_to']);
-        $statuses = isset($_POST['statuses']) ? array_map('sanitize_text_field', $_POST['statuses']) : [];
-    
-        $args = [
-            'type' => 'shop_order',
-            'limit' => -1 // Get total count
-        ];
-    
-        // Apply date range filter only if not exporting all
-        if (!$export_all && $date_from && $date_to) {
-            $args['date_created'] = [
-                'start' => $date_from . ' 00:00:00',
-                'end' => $date_to . ' 23:59:59'
-            ];
-        }
-    
-        // Apply status filter
-        if (!empty($statuses)) {
-            $args['status'] = $statuses;
-        }
-    
-        $orders = wc_get_orders($args);
-        $total_orders = count($orders);
-    
-        // Generate a unique session ID
-        $export_session = uniqid('wc_bulk_export_');
-    
-        wp_send_json_success([
-            'export_session' => $export_session,
-            'total_orders' => $total_orders
-        ]);
-    }
-
-    
-    
-    public function export_order_batch() {
-        check_ajax_referer('export_orders_nonce', 'nonce');
-    
-        if (!current_user_can('manage_woocommerce')) {
-            wp_send_json_error('Insufficient permissions');
-            return;
-        }
-    
-        $batch_size = intval($_POST['batch_size']);
-        $batch_number = intval($_POST['batch_number']);
-        $total_batches = intval($_POST['total_batches']);
-        $export_session = sanitize_text_field($_POST['export_session']);
-        $export_all = isset($_POST['export_all']) ? filter_var($_POST['export_all'], FILTER_VALIDATE_BOOLEAN) : false;
-        $date_from = $export_all ? null : sanitize_text_field($_POST['date_from']);
-        $date_to = $export_all ? null : sanitize_text_field($_POST['date_to']);
-        $statuses = isset($_POST['statuses']) ? array_map('sanitize_text_field', $_POST['statuses']) : [];
-    
-        $args = [
-            'type' => 'shop_order',
-            'limit' => $batch_size,
-            'offset' => $batch_number * $batch_size
-        ];
-    
-        // Apply date range filter only if not exporting all
-        if (!$export_all && $date_from && $date_to) {
-            $args['date_created'] = [
-                'start' => $date_from . ' 00:00:00',
-                'end' => $date_to . ' 23:59:59'
-            ];
-        }
-    
-        // Apply status filter
-        if (!empty($statuses)) {
-            $args['status'] = $statuses;
-        }
-    
-        $orders = wc_get_orders($args);
-    
-        $upload_dir = wp_upload_dir();
-        $export_file = $upload_dir['basedir'] . '/wc-bulk-export-' . sanitize_file_name($export_session) . '.csv';
-    
-        // Open/append to CSV file
-        $file_mode = ($batch_number == 0) ? 'w' : 'a';
-        $fp = fopen($export_file, $file_mode);
-    
-        // Write headers on first batch
-        if ($batch_number == 0) {
-            fputcsv($fp, [
-                'Order ID', 
-                'Date', 
-                'Status', 
-                'Total', 
-                'Customer Name', 
-                'Customer Email',
-                'Shipping Method',
-                'Payment Method'
-            ]);
-        }
-    
-        $success_count = 0;
-        $failed_count = 0;
-    
-        foreach ($orders as $order) {
-            try {
-                // Get shipping method
-                $shipping_method = '';
-                $shipping_methods = $order->get_shipping_methods();
-                if (!empty($shipping_methods)) {
-                    $shipping_method = reset($shipping_methods)->get_method_title();
-                }
-    
-                // Get payment method
-                $payment_method = $order->get_payment_method_title();
-    
-                fputcsv($fp, [
-                    $order->get_id(),
-                    $order->get_date_created()->format('Y-m-d H:i:s'),
-                    $order->get_status(),
-                    $order->get_total(),
-                    $order->get_formatted_billing_full_name(),
-                    $order->get_billing_email(),
-                    $shipping_method,
-                    $payment_method
-                ]);
-                $success_count++;
-            } catch (Exception $e) {
-                $failed_count++;
-            }
-        }
-    
-        fclose($fp);
-    
-        $is_last_batch = ($batch_number + 1) >= $total_batches;
-    
-        if ($is_last_batch) {
-            $download_url = str_replace(
-                $upload_dir['basedir'], 
-                $upload_dir['baseurl'], 
-                $export_file
-            );
-        } else {
-            $download_url = '';
-        }
-    
-        wp_send_json_success([
-            'success' => $success_count,
-            'failed' => $failed_count,
-            'is_last_batch' => $is_last_batch,
-            'download_url' => $download_url
-        ]);
-    }
-
-
-    // Import 
-    public function handle_order_import() {
-        check_ajax_referer('import_orders_nonce', 'nonce');
-    
-        // Process uploaded CSV
-        if (!isset($_FILES['csv_file'])) {
-            wp_send_json_error('No file uploaded');
-        }
-    
-        $file = $_FILES['csv_file']['tmp_name'];
-        $batch_size = intval($_POST['batch_size'] ?? 50);
-        $current_batch = intval($_POST['current_batch'] ?? 0);
-    
-        $orders = $this->parse_csv($file);
-        $total_orders = count($orders);
-    
-        // Calculate the slice of orders for this batch
-        $batch_orders = array_slice($orders, $current_batch * $batch_size, $batch_size);
-    
-        $results = $this->process_orders($batch_orders);
-    
-        // Determine if more batches are needed
-        $is_complete = ($current_batch * $batch_size + count($batch_orders)) >= $total_orders;
-    
-        wp_send_json_success([
-            'processed' => count($batch_orders),
-            'successful' => $results['successful'],
-            'failed' => $results['failed'],
-            'skipped' => $results['skipped'],
-            'total_orders' => $total_orders,
-            'current_batch' => $current_batch,
-            'is_complete' => $is_complete
-        ]);
-    }
-
-    private function parse_csv($file) {
-        $orders = [];
-        if (($handle = fopen($file, "r")) !== FALSE) {
-            // Skip header
-            fgetcsv($handle);
-            
-            while (($data = fgetcsv($handle)) !== FALSE) {
-                $orders[] = [
-                    'order_id' => $data[0],
-                    'date' => $data[1],
-                    'status' => $data[2],
-                    'total' => $data[3],
-                    'customer_name' => $data[4],
-                    'customer_email' => $data[5],
-                    'shipping_method' => $data[6],
-                    'payment_method' => $data[7]
-                ];
-            }
-            fclose($handle);
-        }
-        return $orders;
-    }
-
-    private function process_orders($orders) {
-        $successful = 0;
-        $failed = 0;
-        $skipped = 0;
-    
-        foreach ($orders as $order_data) {
-            try {
-                // Check if order with this custom order number already exists
-                $existing_orders = wc_get_orders([
-                    'meta_key' => '_order_number',
-                    'meta_value' => $order_data['order_id'],
-                    'numberposts' => 1
-                ]);
-    
-                // Skip if order already exists
-                if (!empty($existing_orders)) {
-                    $skipped++;
-                    continue;
-                }
-    
-                // Create a new WooCommerce order
-                $order = wc_create_order([
-                    'status' => $order_data['status']
-                ]);
-    
-                // Set custom order number
-                update_post_meta($order->get_id(), '_order_number', $order_data['order_id']);
-    
-                // Set order data
-                $order->set_date_created(wc_string_to_timestamp($order_data['date']));
-                $order->set_total($order_data['total']);
-    
-                // Create or find customer
-                $customer_id = email_exists($order_data['customer_email']);
-                if (!$customer_id) {
-                    $customer_id = wc_create_new_customer(
-                        $order_data['customer_email'], 
-                        sanitize_user(explode('@', $order_data['customer_email'])[0]),
-                        wp_generate_password()
-                    );
-                }
-    
-                // Set customer
-                $order->set_customer_id($customer_id);
-    
-                // Set billing and shipping details
-                $name_parts = explode(' ', $order_data['customer_name'], 2);
-                $order->set_billing_first_name($name_parts[0]);
-                $order->set_billing_last_name($name_parts[1] ?? '');
-                $order->set_billing_email($order_data['customer_email']);
-    
-                // Set shipping method if provided
-                if (!empty($order_data['shipping_method'])) {
-                    $shipping_item = new WC_Order_Item_Shipping();
-                    $shipping_item->set_method_title($order_data['shipping_method']);
-                    $shipping_item->set_total($order_data['total']); 
-                    $order->add_item($shipping_item);
-                }
-    
-                // Set payment method if provided
-                if (!empty($order_data['payment_method'])) {
-                    $order->set_payment_method($order_data['payment_method']);
-                }
-    
-                // Save the order
-                $order->save();
-    
-                $successful++;
-            } catch (Exception $e) {
-                error_log('Order import error: ' . $e->getMessage());
-                $failed++;
-            }
-        }
-    
-        return [
-            'successful' => $successful,
-            'failed' => $failed,
-            'skipped' => $skipped
-        ];
-    }
-
-
 
 }
 
