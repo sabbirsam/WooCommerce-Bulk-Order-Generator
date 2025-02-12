@@ -15,12 +15,14 @@ class WC_Bulk_Delete {
 
     public function poc_get_counts() {
         check_ajax_referer('poc_ajax_nonce', 'poc_nonce');
-        
+    
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
     
+        wp_cache_flush();
+        
         $product_count = count(wc_get_products(array(
             'limit' => -1,
             'status' => 'any',
@@ -32,138 +34,140 @@ class WC_Bulk_Delete {
             'type' => 'shop_order',
             'return' => 'ids',
         )));
-        
+    
+        error_log('Product count: ' . $product_count . ', Order count: ' . $order_count);
+    
         wp_send_json_success(array(
             'product_count' => (int)$product_count,
             'order_count' => (int)$order_count
         ));
     }
-
+    
     public function poc_delete_orders_batch() {
         check_ajax_referer('poc_ajax_nonce', 'poc_nonce');
-        
+    
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
     
         $offset = isset($_POST['offset']) ? (int)$_POST['offset'] : 0;
-        $batch_size = 40;
-        
-        // Get batch of orders
+        $batch_size = 20; // Increased batch size
+    
         $orders = wc_get_orders(array(
             'limit' => $batch_size,
             'offset' => $offset,
             'type' => 'shop_order',
         ));
-        
+    
         $deleted = 0;
         $skipped = 0;
-        $skipped_ids = array();
-        
+        $errors = array();
+    
         foreach ($orders as $order) {
             try {
-                // Delete the order
+                wp_cache_delete('order-' . $order->get_id(), 'orders');
                 if ($order->delete(true)) {
                     $deleted++;
+                    error_log('Successfully deleted order ID: ' . $order->get_id());
                 } else {
                     $skipped++;
-                    $skipped_ids[] = array(
+                    $errors[] = array(
                         'id' => $order->get_id(),
-                        'number' => $order->get_order_number()
+                        'error' => 'Failed to delete order'
                     );
+                    error_log('Failed to delete order ID: ' . $order->get_id());
                 }
             } catch (Exception $e) {
                 $skipped++;
-                $skipped_ids[] = array(
+                $errors[] = array(
                     'id' => $order->get_id(),
-                    'number' => $order->get_order_number(),
                     'error' => $e->getMessage()
                 );
-                continue;
+                error_log('Exception while deleting order ID: ' . $order->get_id() . ', error: ' . $e->getMessage());
             }
         }
     
-        // Log skipped orders
-        if (!empty($skipped_ids)) {
-            error_log('Skipped orders during bulk deletion: ' . print_r($skipped_ids, true));
+        if (!empty($errors)) {
+            error_log('Errors during batch deletion: ' . print_r($errors, true));
         }
-        
+    
         wp_send_json_success(array(
             'deleted' => $deleted,
             'skipped' => $skipped,
-            'skipped_ids' => $skipped_ids,
+            'errors' => $errors,
             'done' => count($orders) < $batch_size
         ));
     }
-
+    
     public function poc_delete_products_batch() {
         check_ajax_referer('poc_ajax_nonce', 'poc_nonce');
-        
+    
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');
             return;
         }
     
         $offset = isset($_POST['offset']) ? (int)$_POST['offset'] : 0;
-        $batch_size = 40;
-        
-        // Get batch of products
+        $batch_size = 20; // Increased batch size
+    
         $products = wc_get_products(array(
             'status' => 'any',
             'limit' => $batch_size,
             'offset' => $offset,
         ));
-        
+    
         $deleted = 0;
         $skipped = 0;
-        $skipped_ids = array();
-        
+        $errors = array();
+    
         foreach ($products as $product) {
             try {
                 $deletion_successful = true;
-                
-                // Delete variations first if it's a variable product
+    
                 if ($product->is_type('variable')) {
                     $variations = $product->get_children();
                     foreach ($variations as $variation_id) {
+                        wp_cache_delete('product-' . $variation_id, 'products');
                         $variation = wc_get_product($variation_id);
                         if ($variation && !$variation->delete(true)) {
                             $deletion_successful = false;
+                            $errors[] = array(
+                                'id' => $variation_id,
+                                'error' => 'Failed to delete variation'
+                            );
                         }
                     }
                 }
-                
-                // Delete the product
+    
+                wp_cache_delete('product-' . $product->get_id(), 'products');
                 if ($deletion_successful && $product->delete(true)) {
                     $deleted++;
                 } else {
                     $skipped++;
-                    $skipped_ids[] = array(
+                    $errors[] = array(
                         'id' => $product->get_id(),
-                        'name' => $product->get_name()
+                        'error' => 'Failed to delete product'
                     );
                 }
             } catch (Exception $e) {
                 $skipped++;
-                $skipped_ids[] = array(
+                $errors[] = array(
                     'id' => $product->get_id(),
-                    'name' => $product->get_name(),
                     'error' => $e->getMessage()
                 );
-                continue;
+                error_log('Exception while deleting product ID: ' . $product->get_id() . ', error: ' . $e->getMessage());
             }
         }
     
-        // Log skipped products
-        if (!empty($skipped_ids)) {
-            error_log('Skipped products during bulk deletion: ' . print_r($skipped_ids, true));
+        if (!empty($errors)) {
+            error_log('Errors during batch deletion: ' . print_r($errors, true));
         }
-        
+    
         wp_send_json_success(array(
             'deleted' => $deleted,
             'skipped' => $skipped,
-            'skipped_ids' => $skipped_ids,
+            'errors' => $errors,
             'done' => count($products) < $batch_size
         ));
     }
