@@ -931,7 +931,7 @@ jQuery(document).ready(function($) {
 
 // New with retry 
 // Delete functionality
-jQuery(document).ready(function($) {
+/* jQuery(document).ready(function($) {
     const RETRY_DELAY = 3000; // 3 seconds delay between retries
     const MAX_RETRIES = 3; // Maximum number of retries per batch
 
@@ -1103,11 +1103,11 @@ jQuery(document).ready(function($) {
             initializeDelete('order');
         }
     });
-});
+}); */
 
 
 // Delete functionality
-/* jQuery(document).ready(function($) {
+jQuery(document).ready(function($) {
     const RETRY_DELAY = 3000; // 3 seconds delay between retries
     const MAX_RETRIES = 3; // Maximum number of retries per batch
 
@@ -1304,5 +1304,4 @@ jQuery(document).ready(function($) {
             initializeDelete('order');
         }
     });
-}); */
-
+});
