@@ -61,6 +61,7 @@ class WC_Bulk_Order_Generator {
     private $product_generator;
     private $order_export;
     private $order_import;
+    private $bulk_delete;
 
     /**
      * WC_Bulk_Order_Generator constructor.
@@ -98,6 +99,7 @@ class WC_Bulk_Order_Generator {
             'WC_Bulk_Product_Generator' => 'includes/class-wc-bulk-product-generator.php',
             'WC_Bulk_Order_Export' => 'includes/class-wc-bulk-order-export.php',
             'WC_Bulk_Order_Import' => 'includes/class-wc-bulk-order-import.php',
+            'WC_Bulk_Delete' => 'includes/class-wc-bulk-delete.php',
         ];
     
         foreach ($dependencies as $class_name => $file_path) {
@@ -124,6 +126,7 @@ class WC_Bulk_Order_Generator {
         $this->product_generator = new WC_Bulk_Product_Generator();
         $this->order_export = new WC_Bulk_Order_Export();
         $this->order_import = new WC_Bulk_Order_Import();
+        $this->bulk_delete = new WC_Bulk_Delete();
     }
 
     
@@ -290,7 +293,8 @@ class WC_Bulk_Order_Generator {
             'product_batch_size' => $settings['product_batch_size'],
             'max_products' => $settings['max_products'],
             'export_nonce' => wp_create_nonce('export_orders_nonce'),
-            'import_nonce' => wp_create_nonce('import_orders_nonce')
+            'import_nonce' => wp_create_nonce('import_orders_nonce'),
+            'poc_nonce' => wp_create_nonce('poc_ajax_nonce')
         ));
     }
 
@@ -346,6 +350,7 @@ class WC_Bulk_Order_Generator {
                     <a href="#orders" class="nav-tab"><?php esc_html_e('Orders', 'wc-bulk-order-generator'); ?></a>
                     <a href="#export" class="nav-tab"><?php esc_html_e('Export', 'wc-bulk-order-generator'); ?></a>
                     <a href="#import" class="nav-tab"><?php esc_html_e('Import', 'wc-bulk-order-generator'); ?></a>
+                    <a href="#action" class="nav-tab"><?php esc_html_e('Actions', 'wc-bulk-order-generator'); ?></a>
                     <a href="#about" class="nav-tab"><?php esc_html_e('About Me', 'wc-bulk-order-generator'); ?></a>
                 </nav>
 
@@ -619,6 +624,80 @@ class WC_Bulk_Order_Generator {
 
                 </div>
 
+                <div id="action" class="tab-content">
+                    <div class="wrap">
+                        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+                        
+                        <div class="poc-container">
+                            <div class="poc-warning">
+                                <p><strong><?php esc_html_e('Warning:', 'wc-bulk-order-generator'); ?></strong> 
+                                <?php esc_html_e('These actions permanently delete data and cannot be undone. Please backup your database before proceeding.', 'wc-bulk-order-generator'); ?></p>
+                            </div>
+
+                            <!-- Delete Products Card -->
+                            <div class="poc-card">
+                                <h3><?php esc_html_e('Delete All Products', 'wc-bulk-order-generator'); ?></h3>
+                                <p><?php esc_html_e('This will remove:', 'wc-bulk-order-generator'); ?></p>
+                                <ul>
+                                    <li><?php esc_html_e('All product data and meta', 'wc-bulk-order-generator'); ?></li>
+                                    <li><?php esc_html_e('Product categories and tags', 'wc-bulk-order-generator'); ?></li>
+                                    <li><?php esc_html_e('Product images', 'wc-bulk-order-generator'); ?></li>
+                                    <li><?php esc_html_e('Product variations', 'wc-bulk-order-generator'); ?></li>
+                                </ul>
+                                
+                                <div id="product-progress-container" class="poc-progress-container" style="display: none;">
+                                    <div class="poc-progress-wrapper">
+                                        <div id="product-progress-bar" class="poc-progress-bar" style="width: 0%"></div>
+                                    </div>
+                                    <p class="poc-progress-text">
+                                    <?php esc_html_e('Processed:', 'wc-bulk-order-generator'); ?> <span id="product-processed">
+                                        <?php esc_html_e('0', 'wc-bulk-order-generator'); ?>
+                                    </span> 
+                                    </span> 
+                                        <?php esc_html_e('/', 'wc-bulk-order-generator'); ?> 
+                                        <span id="product-total"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?>
+                                    </span>
+                                        <br>
+                                        
+                                    </p>
+                                </div>
+                                
+                                <button type="button" id="delete-products-btn" class="poc-btn delete">
+                                    <span class="poc-spinner" style="display: none;"></span>
+                                    <?php esc_html_e('Delete All Products', 'wc-bulk-order-generator'); ?>
+                                </button>
+                            </div>
+
+                            <!-- Delete Orders Card -->
+                            <div class="poc-card">
+                                <h3><?php esc_html_e('Delete All Orders', 'wc-bulk-order-generator'); ?></h3>
+                                <p><?php esc_html_e('This will remove:', 'wc-bulk-order-generator'); ?></p>
+                                <ul>
+                                    <li><?php esc_html_e('All order data and meta', 'wc-bulk-order-generator'); ?></li>
+                                    <li><?php esc_html_e('Order items and notes', 'wc-bulk-order-generator'); ?></li>
+                                    <li><?php esc_html_e('Customer order history', 'wc-bulk-order-generator'); ?></li>
+                                    <li><?php esc_html_e('Related refunds', 'wc-bulk-order-generator'); ?></li>
+                                </ul>
+                                
+                                <div id="order-progress-container" class="poc-progress-container" style="display: none;">
+                                    <div class="poc-progress-wrapper">
+                                        <div id="order-progress-bar" class="poc-progress-bar" style="width: 0%"></div>
+                                    </div>
+                                    <p class="poc-progress-text">
+                                    <?php esc_html_e('Processed:', 'wc-bulk-order-generator'); ?> <span id="order-processed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></span> <?php esc_html_e('/', 'wc-bulk-order-generator'); ?>  <span id="order-total"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></span>
+                                        <br>
+                                        
+                                    </p>
+                                </div>
+                                
+                                <button type="button" id="delete-orders-btn" class="poc-btn delete">
+                                    <span class="poc-spinner" style="display: none;"></span>
+                                    <?php esc_html_e('Delete All Orders', 'wc-bulk-order-generator'); ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             
                 <!-- About Tab -->
                 <div id="about" class="tab-content">

@@ -644,3 +644,156 @@ select[multiple] option:hover {
         font-size: 1.5rem;
     }
 }
+
+
+
+/* Delete  */
+/* Create css/poc-styles.css in your plugin directory */
+.poc-container {
+    max-width: 800px;
+    margin: 20px 0;
+}
+
+.poc-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.poc-card h3 {
+    color: #23282d;
+    font-size: 1.3em;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f1f1f1;
+}
+
+.poc-warning {
+    background: #fff8e5;
+    border-left: 4px solid #ffb900;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 3px;
+}
+
+.poc-list {
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 15px 15px 15px 35px;
+    margin: 15px 0;
+}
+
+.poc-list li {
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.poc-progress-container {
+    margin: 20px 0;
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.poc-progress-wrapper {
+    background: #e9ecef;
+    border-radius: 4px;
+    padding: 2px;
+    margin: 10px 0;
+}
+
+.poc-progress-bar {
+    background: linear-gradient(45deg, #2271b1, #599fd6);
+    height: 24px;
+    border-radius: 3px;
+    transition: width 0.3s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.poc-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg,
+            rgba(255, 255, 255, 0.2) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0.2) 75%,
+            transparent 75%,
+            transparent);
+    background-size: 20px 20px;
+    animation: move 2s linear infinite;
+}
+
+@keyframes move {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 40px 40px;
+    }
+}
+
+.poc-progress-text {
+    color: #555;
+    font-size: 14px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.poc-btn {
+    background: #2271b1;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.poc-btn:hover {
+    background: #135e96;
+}
+
+.poc-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.poc-btn.delete {
+    background: #dc3545;
+}
+
+.poc-btn.delete:hover {
+    background: #c82333;
+}
+
+/* Loading spinner */
+.poc-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, .3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
