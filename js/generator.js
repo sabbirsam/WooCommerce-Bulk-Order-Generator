@@ -791,7 +791,7 @@ jQuery(document).ready(function($) {
 });
 
 // Delete Functionality 
-jQuery(document).ready(function($) {
+/* jQuery(document).ready(function($) {
     const RETRY_DELAY = 3000; 
     const MAX_RETRIES = 3;
 
@@ -993,5 +993,260 @@ jQuery(document).ready(function($) {
         if (confirm('Are you absolutely sure you want to delete ALL orders? This cannot be undone!')) {
             initializeDelete('order');
         }
+    });
+}); */
+
+jQuery(document).ready(function($) {
+    const RETRY_DELAY = 3000; 
+    const MAX_RETRIES = 3;
+
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
+        
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function showConfirmDialog(type, callback) {
+        const confirmDialog = $(`
+            <div class="wc-confirm-dialog">
+                <div class="wc-confirm-content">
+                    <h3>Confirm Deletion</h3>
+                    <p>Are you absolutely sure you want to delete ALL ${type}s? This action cannot be undone!</p>
+                    <div class="wc-confirm-buttons">
+                        <button class="button button-secondary cancel-delete">Cancel</button>
+                        <button class="button button-primary confirm-delete">Confirm Delete</button>
+                    </div>
+                </div>
+            </div>
+        `).appendTo('body');
+
+        confirmDialog.find('.cancel-delete').on('click', function() {
+            confirmDialog.remove();
+        });
+
+        confirmDialog.find('.confirm-delete').on('click', function() {
+            confirmDialog.remove();
+            callback();
+        });
+    }
+
+    function initializeDelete(type, retryCount = 0) {
+        $(`#delete-${type}s-btn .poc-spinner`).show();
+        $(`#delete-${type}s-btn`).prop('disabled', true);
+        
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'poc_get_counts',
+                nonce: wcOrderGenerator.poc_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    const count = type === 'product' ? response.data.product_count : response.data.order_count;
+                    if (count === 0) {
+                        showToast(`No ${type}s found to delete.`, 'warning');
+                        location.reload();
+                        return;
+                    }
+                    $(`#${type}-total`).text(count);
+                    
+                    const infoHtml = `
+                        <div class="info-container" style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <div style="display: flex; gap: 20px;">
+                                <div class="skip-info">Skipped: <span id="${type}-skipped">0</span></div>
+                                <div class="retry-info">Retry: <span id="${type}-retry-count">0</span></div>
+                            </div>
+                            <div class="count-progress" id="${type}-count-progress">Progress: 0/${count}</div>
+                        </div>
+                    `;
+                    
+                    $(`#${type}-progress-container .info-container`).remove();
+                    $(`#${type}-progress-container`).append(infoHtml);
+                    $(`#${type}-progress-container`).slideDown(300);
+                    
+                    showToast(`Starting ${type} deletion process...`, 'info');
+                    setTimeout(() => {
+                        processBatch(type, 0, count, 0, 0, 0);
+                    }, 500);
+                } else {
+                    handleError(type, response.data || 'Error getting counts');
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                if (retryCount < MAX_RETRIES) {
+                    console.log(`Retrying initialization after error: ${errorThrown}`);
+                    setTimeout(() => {
+                        initializeDelete(type, retryCount + 1);
+                    }, RETRY_DELAY);
+                } else {
+                    handleError(type, `Failed to initialize after ${MAX_RETRIES} attempts: ${errorThrown}`);
+                }
+            }
+        });
+    }
+
+    function processBatch(type, offset, total, skipped, totalProcessed, retryCount) {
+        console.log(`Processing batch: type=${type}, offset=${offset}, total=${total}, skipped=${skipped}, totalProcessed=${totalProcessed}, retryCount=${retryCount}`);
+        
+        $(`#${type}-retry-count`).text(retryCount);
+        
+        if (retryCount > 0) {
+            skipped = parseInt($(`#${type}-skipped`).text()) + 1;
+            $(`#${type}-skipped`).text(skipped);
+            showToast(`Retrying batch deletion (Attempt ${retryCount} of ${MAX_RETRIES})`, 'warning');
+        }
+
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            timeout: 30000,
+            data: {
+                action: `poc_delete_${type}s_batch`,
+                nonce: wcOrderGenerator.poc_nonce,
+                offset: offset
+            },
+            success: function(response) {
+                if (response.success) {
+                    const batchProcessed = response.data.deleted + response.data.skipped;
+                    const newTotalProcessed = totalProcessed + batchProcessed;
+                    const newSkipped = skipped + (response.data.skipped || 0);
+                    const percentage = Math.round((newTotalProcessed / total) * 100);
+    
+                    $(`#${type}-progress-bar`).css('width', percentage + '%');
+                    $(`#${type}-processed`).text(newTotalProcessed);
+                    $(`#${type}-skipped`).text(newSkipped);
+                    $(`#${type}-count-progress`).text(`Progress: ${newTotalProcessed}/${total}`);
+                    $(`#${type}-retry-count`).text('0');
+    
+                    if (response.data.errors && response.data.errors.length > 0) {
+                        showToast(`Some ${type}s could not be deleted`, 'warning');
+                        console.error(`Errors during ${type} deletion:`, response.data.errors);
+                    }
+    
+                    if (!response.data.done) {
+                        setTimeout(() => {
+                            processBatch(type, offset + batchProcessed, total, newSkipped, newTotalProcessed, 0);
+                        }, 1000);
+                    } else {
+                        setTimeout(() => {
+                            verifyDeletion(type, newSkipped, newTotalProcessed);
+                        }, 2000);
+                    }
+                } else {
+                    if (retryCount < MAX_RETRIES) {
+                        setTimeout(() => {
+                            processBatch(type, offset, total, skipped, totalProcessed, retryCount + 1);
+                        }, RETRY_DELAY);
+                    } else {
+                        handleError(type, response.data || `Error deleting ${type}s`);
+                    }
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                if (retryCount < MAX_RETRIES) {
+                    setTimeout(() => {
+                        processBatch(type, offset, total, skipped, totalProcessed, retryCount + 1);
+                    }, RETRY_DELAY);
+                } else {
+                    handleError(type, `Failed to process batch after ${MAX_RETRIES} attempts: ${errorThrown}`);
+                }
+            }
+        });
+    }
+
+    function verifyDeletion(type, skipped, totalProcessed, retryCount = 0) {
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'poc_get_counts',
+                nonce: wcOrderGenerator.poc_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    const remainingCount = type === 'product' ? response.data.product_count : response.data.order_count;
+                    
+                    $(`#delete-${type}s-btn .poc-spinner`).hide();
+                    
+                    let message;
+                    if (remainingCount === 0 || remainingCount === skipped) {
+                        message = `Operation completed!\n${skipped} ${type}s were skipped\n${totalProcessed - skipped} ${type}s have been successfully deleted!`;
+                        showToast(message, 'success');
+                    } else if (remainingCount < skipped) {
+                        message = `Operation completed!\n${remainingCount} ${type}s remain\n${totalProcessed - remainingCount} ${type}s have been successfully deleted!`;
+                        showToast(message, 'success');
+                    } else {
+                        showToast(`Additional ${type}s found. Continuing deletion process...`, 'info');
+                        setTimeout(() => {
+                            initializeDelete(type);
+                        }, 5000);
+                        return;
+                    }
+                    
+                    // Show detailed results in a notice
+                    const noticeHtml = `
+                        <div class="notice notice-success">
+                            <p>${message.replace(/\n/g, '<br>')}</p>
+                        </div>
+                    `;
+                    
+                    // Insert the notice at the top of the page
+                    $('.wrap h2').after(noticeHtml);
+                    
+                    setTimeout(() => {
+                        location.reload();
+                    }, 3000);
+                } else {
+                    handleError(type, `Error verifying ${type} deletion`);
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                if (retryCount < MAX_RETRIES) {
+                    setTimeout(() => {
+                        verifyDeletion(type, skipped, totalProcessed, retryCount + 1);
+                    }, RETRY_DELAY);
+                } else {
+                    handleError(type, `Failed to verify deletion after ${MAX_RETRIES} attempts: ${errorThrown}`);
+                }
+            }
+        });
+    }
+
+    function handleError(type, errorMessage) {
+        console.error(errorMessage);
+        $(`#delete-${type}s-btn .poc-spinner`).hide();
+        $(`#delete-${type}s-btn`).prop('disabled', false);
+        showToast(errorMessage, 'error');
+    }
+
+    $('#delete-products-btn').click(function() {
+        showConfirmDialog('product', function() {
+            initializeDelete('product');
+        });
+    });
+
+    $('#delete-orders-btn').click(function() {
+        showConfirmDialog('order', function() {
+            initializeDelete('order');
+        });
     });
 });
