@@ -648,7 +648,6 @@ select[multiple] option:hover {
 
 
 /* Delete  */
-/* Create css/poc-styles.css in your plugin directory */
 .poc-container {
     max-width: 800px;
     margin: 20px 0;
@@ -777,6 +776,50 @@ select[multiple] option:hover {
 
 .poc-btn.delete:hover {
     background: #c82333;
+}
+
+.count-progress {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+}
+
+/* List container styling */
+.poc-list {
+    padding-left: 1.5em;
+    margin: 1em 0;
+}
+
+/* List items styling */
+.poc-list li {
+    position: relative;
+    padding: 8px 0 8px 25px;
+    margin: 0;
+    list-style: none;
+    line-height: 1.4;
+    color: #4a5568;
+}
+
+/* Custom bullet points */
+.poc-list li:before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #2271b1;
+    /* WordPress blue color */
+    font-size: 1.2em;
+    line-height: 1.2;
+}
+
+/* Hover effect */
+.poc-list li:hover {
+    color: #2271b1;
+    transition: color 0.2s ease;
+}
+
+/* Spacing between lists if they're next to each other */
+.poc-list+.poc-list {
+    margin-top: 1.5em;
 }
 
 /* Loading spinner */

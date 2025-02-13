@@ -9,7 +9,7 @@
  * 
  * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
- * Version: 1.1.0
+ * Version: 1.2.0
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Author: sabbirsam
@@ -24,7 +24,7 @@
 
 
 // Define plugin constants.
-define('WC_BULK_GENERATOR_VERSION', '1.1.0');
+define('WC_BULK_GENERATOR_VERSION', '1.2.0');
 define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -638,7 +638,7 @@ class WC_Bulk_Order_Generator {
                             <div class="poc-card">
                                 <h3><?php esc_html_e('Delete All Products', 'wc-bulk-order-generator'); ?></h3>
                                 <p><?php esc_html_e('This will remove:', 'wc-bulk-order-generator'); ?></p>
-                                <ul>
+                                <ul class="poc-list">
                                     <li><?php esc_html_e('All product data and meta', 'wc-bulk-order-generator'); ?></li>
                                     <li><?php esc_html_e('Product categories and tags', 'wc-bulk-order-generator'); ?></li>
                                     <li><?php esc_html_e('Product images', 'wc-bulk-order-generator'); ?></li>
@@ -672,7 +672,7 @@ class WC_Bulk_Order_Generator {
                             <div class="poc-card">
                                 <h3><?php esc_html_e('Delete All Orders', 'wc-bulk-order-generator'); ?></h3>
                                 <p><?php esc_html_e('This will remove:', 'wc-bulk-order-generator'); ?></p>
-                                <ul>
+                                <ul class="poc-list">
                                     <li><?php esc_html_e('All order data and meta', 'wc-bulk-order-generator'); ?></li>
                                     <li><?php esc_html_e('Order items and notes', 'wc-bulk-order-generator'); ?></li>
                                     <li><?php esc_html_e('Customer order history', 'wc-bulk-order-generator'); ?></li>

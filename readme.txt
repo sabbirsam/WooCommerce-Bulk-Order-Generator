@@ -4,7 +4,7 @@ Tags: bulk orders, test products, order generator, product generator, testing to
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 5.6
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -29,6 +29,16 @@ WC Bulk Order Generator helps developers and store owners create realistic WooCo
 - **Multiple payment methods**  
 - **Dynamic shipping options**  
 - **Automated tax calculations**  
+
+### 📦 Orders Export & Import
+- *Export orders in bulk**
+- *Import orders via CSV**
+- *Choose order status before export**
+
+### 🗑️ Bulk Delete 
+- *Delete all generated products with one click**
+- *Remove all generated orders effortlessly**
+ 
 
 ### ⚡ Performance Features  
 - **Memory-efficient batch processing**  
@@ -83,6 +93,11 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 5. About page
 
 == Changelog ==
+
+**Version 1.2.0** 
+🚀 New Features
+- Bulk Delete All Products: Quickly remove all generated products
+- Bulk Delete All Orders: Easily delete all generated orders
 
 **Version 1.1.0**  
 🚀 New Features
