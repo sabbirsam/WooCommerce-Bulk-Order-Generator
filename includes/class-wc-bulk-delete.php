@@ -14,7 +14,10 @@ class WC_Bulk_Delete {
 
 
     public function poc_get_counts() {
-        check_ajax_referer('poc_ajax_nonce', 'poc_nonce');
+        if (!check_ajax_referer('poc_ajax_nonce', 'nonce', false)) {
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
     
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');
@@ -44,8 +47,11 @@ class WC_Bulk_Delete {
     }
     
     public function poc_delete_orders_batch() {
-        check_ajax_referer('poc_ajax_nonce', 'poc_nonce');
-    
+        if (!check_ajax_referer('poc_ajax_nonce', 'nonce', false)) {
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
+
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');
             return;
@@ -101,7 +107,10 @@ class WC_Bulk_Delete {
     }
     
     public function poc_delete_products_batch() {
-        check_ajax_referer('poc_ajax_nonce', 'poc_nonce');
+        if (!check_ajax_referer('poc_ajax_nonce', 'nonce', false)) {
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
     
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error('Insufficient permissions');

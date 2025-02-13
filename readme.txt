@@ -1,6 +1,6 @@
 === WC Bulk Order Generator ===
 Contributors: devsabbirahmed
-Tags: bulk orders, test products, order generator, product generator, testing tools
+Tags: order export, woocommerce, order generator, product generator, testing woocommerce
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 5.6
