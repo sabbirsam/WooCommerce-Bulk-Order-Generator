@@ -31,13 +31,13 @@ WC Bulk Order Generator helps developers and store owners create realistic WooCo
 - **Automated tax calculations**  
 
 ### 📦 Orders Export & Import
-- *Export orders in bulk**
-- *Import orders via CSV**
-- *Choose order status before export**
+- **Export orders in bulk**
+- **Import orders via CSV**
+- **Choose order status before export**
 
 ### 🗑️ Bulk Delete 
-- *Delete all generated products with one click**
-- *Remove all generated orders effortlessly**
+- **Delete all generated products with one click**
+- **Remove all generated orders effortlessly**
  
 
 ### ⚡ Performance Features  
