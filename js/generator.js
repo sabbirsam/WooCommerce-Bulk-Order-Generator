@@ -227,8 +227,10 @@ jQuery(document).ready(function($) {
     }
 
     function handleError(message) {
+        const batchSize = 0;
         failedCount += batchSize;
         updateProgress();
+        $('#time-remaining').text(formatDuration(failedCount));
         finishGeneration(message, 'error');
     }
 
@@ -791,211 +793,6 @@ jQuery(document).ready(function($) {
 });
 
 // Delete Functionality 
-/* jQuery(document).ready(function($) {
-    const RETRY_DELAY = 3000; 
-    const MAX_RETRIES = 3;
-
-    function initializeDelete(type, retryCount = 0) {
-        $(`#delete-${type}s-btn .poc-spinner`).show();
-        $(`#delete-${type}s-btn`).prop('disabled', true);
-        
-        $.ajax({
-            url: wcOrderGenerator.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'poc_get_counts',
-                nonce: wcOrderGenerator.poc_nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    const count = type === 'product' ? response.data.product_count : response.data.order_count;
-                    if (count === 0) {
-                        alert(`No ${type}s found to delete.`);
-                        location.reload();
-                        return;
-                    }
-                    $(`#${type}-total`).text(count);
-                    
-                    // Create a flex container for skipped, retry, and progress count
-                    const infoHtml = `
-                        <div class="info-container" style="display: flex; justify-content: space-between; margin-top: 10px;">
-                            <div style="display: flex; gap: 20px;">
-                                <div class="skip-info">Skipped: <span id="${type}-skipped">0</span></div>
-                                <div class="retry-info">Retry: <span id="${type}-retry-count">0</span></div>
-                            </div>
-                            <div class="count-progress" id="${type}-count-progress">Progress: 0/${count}</div>
-                        </div>
-                    `;
-                    
-                    // Remove any existing info containers before adding new one
-                    $(`#${type}-progress-container .info-container`).remove();
-                    $(`#${type}-progress-container`).append(infoHtml);
-                    $(`#${type}-progress-container`).slideDown(300);
-                    
-                    setTimeout(() => {
-                        processBatch(type, 0, count, 0, 0, 0);
-                    }, 500);
-                } else {
-                    handleError(type, response.data || 'Error getting counts');
-                }
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                if (retryCount < MAX_RETRIES) {
-                    console.log(`Retrying initialization after error: ${errorThrown}`);
-                    setTimeout(() => {
-                        initializeDelete(type, retryCount + 1);
-                    }, RETRY_DELAY);
-                } else {
-                    handleError(type, `Failed to initialize after ${MAX_RETRIES} attempts: ${errorThrown}`);
-                }
-            }
-        });
-    }
-
-    function processBatch(type, offset, total, skipped, totalProcessed, retryCount) {
-        console.log(`Processing batch: type=${type}, offset=${offset}, total=${total}, skipped=${skipped}, totalProcessed=${totalProcessed}, retryCount=${retryCount}`);
-        
-        // Update retry counter display
-        $(`#${type}-retry-count`).text(retryCount);
-        
-        // Update skipped counter before making the request if it's a retry
-        if (retryCount > 0) {
-            skipped = parseInt($(`#${type}-skipped`).text()) + 1;
-            $(`#${type}-skipped`).text(skipped);
-        }
-
-        $.ajax({
-            url: wcOrderGenerator.ajaxurl,
-            type: 'POST',
-            timeout: 30000,
-            data: {
-                action: `poc_delete_${type}s_batch`,
-                nonce: wcOrderGenerator.poc_nonce,
-                offset: offset
-            },
-            success: function(response) {
-                if (response.success) {
-                    const batchProcessed = response.data.deleted + response.data.skipped;
-                    const newTotalProcessed = totalProcessed + batchProcessed;
-                    const newSkipped = skipped + (response.data.skipped || 0);
-                    const percentage = Math.round((newTotalProcessed / total) * 100);
-    
-                    console.log(`Batch completed: totalProcessed=${newTotalProcessed}, skipped=${newSkipped}, percentage=${percentage}%`);
-    
-                    // Update progress
-                    $(`#${type}-progress-bar`).css('width', percentage + '%');
-                    $(`#${type}-processed`).text(newTotalProcessed);
-                    $(`#${type}-skipped`).text(newSkipped);
-                    $(`#${type}-count-progress`).text(`Progress: ${newTotalProcessed}/${total}`);
-                    $(`#${type}-retry-count`).text('0'); // Reset retry count for next batch
-    
-                    if (response.data.errors && response.data.errors.length > 0) {
-                        console.error(`Errors during ${type} deletion:`, response.data.errors);
-                    }
-    
-                    if (!response.data.done) {
-                        setTimeout(() => {
-                            processBatch(type, offset + batchProcessed, total, newSkipped, newTotalProcessed, 0);
-                        }, 1000);
-                    } else {
-                        console.log(`Deletion Summary:
-                            Total: ${total}
-                            Processed: ${newTotalProcessed}
-                            Successful: ${newTotalProcessed - newSkipped}
-                            Skipped: ${newSkipped}`
-                        );
-                        setTimeout(() => {
-                            verifyDeletion(type, newSkipped, newTotalProcessed);
-                        }, 2000);
-                    }
-                } else {
-                    // Handle batch failure with retry
-                    if (retryCount < MAX_RETRIES) {
-                        console.log(`Batch failed, attempt ${retryCount + 1} of ${MAX_RETRIES}`);
-                        setTimeout(() => {
-                            processBatch(type, offset, total, skipped, totalProcessed, retryCount + 1);
-                        }, RETRY_DELAY);
-                    } else {
-                        handleError(type, response.data || `Error deleting ${type}s`);
-                    }
-                }
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                if (retryCount < MAX_RETRIES) {
-                    console.log(`Retrying batch after error: ${errorThrown}`);
-                    setTimeout(() => {
-                        processBatch(type, offset, total, skipped, totalProcessed, retryCount + 1);
-                    }, RETRY_DELAY);
-                } else {
-                    handleError(type, `Failed to process batch after ${MAX_RETRIES} attempts: ${errorThrown}`);
-                }
-            }
-        });
-    }
-
-    function verifyDeletion(type, skipped, totalProcessed, retryCount = 0) {
-        $.ajax({
-            url: wcOrderGenerator.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'poc_get_counts',
-                nonce: wcOrderGenerator.poc_nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    const remainingCount = type === 'product' ? response.data.product_count : response.data.order_count;
-                    
-                    if (remainingCount === 0 || remainingCount === skipped) {
-                        $(`#delete-${type}s-btn .poc-spinner`).hide();
-                        alert(`Operation completed!\n${skipped} ${type}s were skipped\n${totalProcessed - skipped} ${type}s have been successfully deleted!`);
-                        location.reload();
-                    } else if (remainingCount < skipped) {
-                        $(`#delete-${type}s-btn .poc-spinner`).hide();
-                        alert(`Operation completed!\n${remainingCount} ${type}s remain\n${totalProcessed - remainingCount} ${type}s have been successfully deleted!`);
-                        location.reload();
-                    } else {
-                        console.log(`Items remaining after deletion: ${remainingCount}`);
-                        setTimeout(() => {
-                            initializeDelete(type);
-                        }, 5000);
-                    }
-                } else {
-                    handleError(type, `Error verifying ${type} deletion`);
-                }
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                if (retryCount < MAX_RETRIES) {
-                    console.log(`Retrying verification after error: ${errorThrown}`);
-                    setTimeout(() => {
-                        verifyDeletion(type, skipped, totalProcessed, retryCount + 1);
-                    }, RETRY_DELAY);
-                } else {
-                    handleError(type, `Failed to verify deletion after ${MAX_RETRIES} attempts: ${errorThrown}`);
-                }
-            }
-        });
-    }
-
-    function handleError(type, errorMessage) {
-        console.error(errorMessage);
-        $(`#delete-${type}s-btn .poc-spinner`).hide();
-        $(`#delete-${type}s-btn`).prop('disabled', false);
-        alert(`Error: ${errorMessage}\nPlease try again with a smaller batch size or contact support if the issue persists.`);
-    }
-
-    $('#delete-products-btn').click(function() {
-        if (confirm('Are you absolutely sure you want to delete ALL products? This cannot be undone!')) {
-            initializeDelete('product');
-        }
-    });
-
-    $('#delete-orders-btn').click(function() {
-        if (confirm('Are you absolutely sure you want to delete ALL orders? This cannot be undone!')) {
-            initializeDelete('order');
-        }
-    });
-}); */
-
 jQuery(document).ready(function($) {
     const RETRY_DELAY = 3000; 
     const MAX_RETRIES = 3;
@@ -1064,7 +861,8 @@ jQuery(document).ready(function($) {
                     const count = type === 'product' ? response.data.product_count : response.data.order_count;
                     if (count === 0) {
                         showToast(`No ${type}s found to delete.`, 'warning');
-                        location.reload();
+                        // location.reload();
+                        resetProgress(type);
                         return;
                     }
                     $(`#${type}-total`).text(count);
@@ -1195,7 +993,9 @@ jQuery(document).ready(function($) {
                         message = `Operation completed!\n${remainingCount} ${type}s remain\n${totalProcessed - remainingCount} ${type}s have been successfully deleted!`;
                         showToast(message, 'success');
                     } else {
-                        showToast(`Additional ${type}s found. Continuing deletion process...`, 'info');
+                        const nextRetryCount = retryCount + 1;
+                        $(`#${type}-retry-count`).text(nextRetryCount);
+                        showToast(`Additional ${type}s found. Continuing deletion process... (Attempt ${nextRetryCount})`, 'info');
                         setTimeout(() => {
                             initializeDelete(type);
                         }, 5000);
@@ -1212,9 +1012,7 @@ jQuery(document).ready(function($) {
                     // Insert the notice at the top of the page
                     $('.wrap h2').after(noticeHtml);
                     
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
+
                 } else {
                     handleError(type, `Error verifying ${type} deletion`);
                 }
@@ -1249,4 +1047,50 @@ jQuery(document).ready(function($) {
             initializeDelete('order');
         });
     });
+
+
+    // Reset Button 
+    ['product', 'order'].forEach(type => {
+        $('<button>', {
+            id: `reset-${type}-progress-btn`,
+            class: 'button button-secondary',
+            text: 'Reset',
+            css: {
+                'float': 'right',
+                'margin-left': '10px'
+            }
+        }).insertAfter(`#${type}-progress-container`);
+    });
+
+    // Reset function
+    function resetProgress(type) {
+        // Reset progress bar
+        $(`#${type}-progress-bar`).css('width', '0%');
+        
+        // Reset counters
+        $(`#${type}-processed`).text('0');
+        $(`#${type}-total`).text('0');
+        $(`#${type}-skipped`).text('0');
+        $(`#${type}-retry-count`).text('0');
+        $(`#${type}-count-progress`).text('Progress: 0/0');
+        
+        // Enable delete button if it was disabled
+        $(`#delete-${type}s-btn`).prop('disabled', false);
+        
+        // Hide spinner if it was visible
+        $(`#delete-${type}s-btn .poc-spinner`).hide();
+
+        // Show toast notification
+        showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} progress has been reset successfully!`, 'success');
+    }
+
+    // Bind click events to reset buttons
+    $('#reset-product-progress-btn').on('click', function() {
+        resetProgress('product');
+    });
+
+    $('#reset-order-progress-btn').on('click', function() {
+        resetProgress('order');
+    });
+
 });

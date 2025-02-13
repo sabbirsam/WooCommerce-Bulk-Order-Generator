@@ -4,7 +4,7 @@ Tags: order export, woocommerce, order generator, product generator, testing woo
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 5.6
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -93,6 +93,9 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 5. About page
 
 == Changelog ==
+
+**Version 1.2.1** 
+- Bulk delete bug fix: Fixed bulk delete not start the processing. 
 
 **Version 1.2.0** 
 🚀 New Features

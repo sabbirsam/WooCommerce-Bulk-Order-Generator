@@ -9,7 +9,7 @@
  * 
  * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
- * Version: 1.2.0
+ * Version: 1.2.1
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Author: sabbirsam
@@ -24,7 +24,7 @@
 
 
 // Define plugin constants.
-define('WC_BULK_GENERATOR_VERSION', '1.2.0');
+define('WC_BULK_GENERATOR_VERSION', '1.2.1');
 define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
