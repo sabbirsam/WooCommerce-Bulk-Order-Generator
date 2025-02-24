@@ -9,7 +9,7 @@
  * 
  * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
- * Version: 1.2.1
+ * Version: 1.3.0
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Author: sabbirsam
@@ -24,7 +24,7 @@
 
 
 // Define plugin constants.
-define('WC_BULK_GENERATOR_VERSION', '1.2.1');
+define('WC_BULK_GENERATOR_VERSION', '1.3.0');
 define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -374,7 +374,7 @@ class WC_Bulk_Order_Generator {
                                        min="1" 
                                        max="10000">
                                 <p class="description">
-                                    <?php esc_html_e('Generate between 1 and 10k products', 'wc-bulk-order-generator'); ?>
+                                    <?php esc_html_e('Total number of product you want to create', 'wc-bulk-order-generator'); ?>
                                 </p>
                             </div>
     
@@ -385,8 +385,12 @@ class WC_Bulk_Order_Generator {
                                        min="5" 
                                        max="30">
                                 <p class="description">
-                                    <?php esc_html_e('Products to process per batch (5-30)', 'wc-bulk-order-generator'); ?>
+                                    <?php esc_html_e('Set the amount to generate product at a time in each batch (5-30)', 'wc-bulk-order-generator'); ?>
                                 </p>
+                                <div class="poc-note">
+                                    <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                </div>
                             </div>
                         </div>
     
@@ -427,7 +431,7 @@ class WC_Bulk_Order_Generator {
                                     min="1" 
                                     max="10000">
                                 <p class="description">
-                                    <?php esc_html_e('Generate between 1 and 10k orders', 'wc-bulk-order-generator'); ?>
+                                    <?php esc_html_e('Total number of order you want to create', 'wc-bulk-order-generator'); ?>
                                 </p>
                             </div>
 
@@ -438,8 +442,12 @@ class WC_Bulk_Order_Generator {
                                        min="5" 
                                        max="30">
                                 <p class="description">
-                                    <?php esc_html_e('Orders to process per batch (5-30)', 'wc-bulk-order-generator'); ?>
+                                    <?php esc_html_e('Set the amount to generate order at a time in each batch (5-30)', 'wc-bulk-order-generator'); ?>
                                 </p>
+                                <div class="poc-note">
+                                    <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                </div>
                             </div>
                         </div>
     
@@ -499,11 +507,16 @@ class WC_Bulk_Order_Generator {
                                 <label for="export-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="export-batch-size" name="export-batch-size" 
                                     value="10" min="5" max="30">
-                                <p class="description"><?php esc_html_e('Number of orders to export per batch (5-30)', 'wc-bulk-order-generator'); ?></p>
+                                <p class="description"><?php esc_html_e('Number of orders to export per batch (5-30).', 'wc-bulk-order-generator'); ?></p>
+                                <div class="poc-note">
+                                    <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                </div>
                             </div>
 
                             <div class="setting-card">
                                 <label for="export-status"><?php esc_html_e('Order Status', 'wc-bulk-order-generator'); ?></label>
+                                <p><?php esc_html_e('Select the order types you want to export. If none are selected, all data will be exported.', 'wc-bulk-order-generator'); ?> </p>
                                 <select id="export-status" name="export-status" multiple>
                                     <?php
                                     $order_statuses = wc_get_order_statuses();
@@ -544,6 +557,8 @@ class WC_Bulk_Order_Generator {
                                 </div>
                             </div>
 
+                            <div id="export-order-status" class="notice notice-info" style="display: none;"></div>
+
                             <div class="control-buttons">
                                 <input type="submit" id="start-order-export" class="button button-primary" value="<?php esc_attr_e('Export Orders', 'wc-bulk-order-generator'); ?>">
                                 <button type="button" id="reset-order-export" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
@@ -551,7 +566,13 @@ class WC_Bulk_Order_Generator {
                         </form>
                     </div>
 
-
+                    <br>
+                    <br>
+                    <br>
+                    <hr>
+                    <hr>
+                    <br>
+                    <br>
                      <!-- Product Export section -->
                     <div class="export-section">
                         <h2><?php esc_html_e('Product Export', 'wc-bulk-order-generator'); ?></h2>
@@ -561,10 +582,16 @@ class WC_Bulk_Order_Generator {
                                 <input type="number" id="product-export-batch-size" name="product-export-batch-size" 
                                     value="10" min="5" max="30">
                                 <p class="description"><?php esc_html_e('Number of products to export per batch (5-30)', 'wc-bulk-order-generator'); ?></p>
+                                <div class="poc-note">
+                                    <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                </div>
                             </div>
 
                             <div class="setting-card">
                                 <label for="product-type"><?php esc_html_e('Product Type', 'wc-bulk-order-generator'); ?></label>
+                                <p><?php esc_html_e('Choose the data types from the selection fields below. If none are selected, all products will be exported.', 'wc-bulk-order-generator'); ?></p>
+
                                 <select id="product-type" name="product-type" multiple>
                                     <?php
                                     $product_types = wc_get_product_types();
@@ -629,6 +656,8 @@ class WC_Bulk_Order_Generator {
                                 </div>
                             </div>
 
+                            <div id="export-product-status" class="notice notice-info" style="display: none;"></div>
+
                             <div class="control-buttons">
                                 <input type="submit" id="start-product-export" class="button button-primary" value="<?php esc_attr_e('Export Products', 'wc-bulk-order-generator'); ?>">
                                 <button type="button" id="reset-product-export" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
@@ -642,6 +671,7 @@ class WC_Bulk_Order_Generator {
                 <div id="import" class="tab-content">
                     <!-- Import  -->
                     <div class="import-section">
+                        <h2><?php esc_html_e('Order Import', 'wc-bulk-order-generator'); ?></h2>
                         <form id="order-import-form" enctype="multipart/form-data">
                             
                             <table class="form-table enhanced-import-settings">
@@ -666,7 +696,7 @@ class WC_Bulk_Order_Generator {
                                         </div>
                                         <p class="description"><?php esc_html_e('Upload a CSV file with order details', 'wc-bulk-order-importer'); ?></p>
                                         <div class="file-upload-validation">
-                                            <small><?php esc_html_e('Accepted: .csv | Drag & Drop', 'wc-bulk-order-importer'); ?></small>
+                                            <small><?php esc_html_e('Accepted: .csv | 50MB only | Use only WC Bulk Generator CSV', 'wc-bulk-order-importer'); ?></small>
                                         </div>
                                     </td>
                                 </tr>
@@ -678,6 +708,10 @@ class WC_Bulk_Order_Generator {
                                         <input type="number" id="import-batch-size" name="batch_size" 
                                             value="10" min="5" max="30">
                                         <p class="description"><?php esc_html_e('Number of orders to process per batch (5-30)', 'wc-bulk-order-importer'); ?></p>
+                                        <div class="poc-note">
+                                            <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                            <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
@@ -709,6 +743,8 @@ class WC_Bulk_Order_Generator {
                                 </div>
                             </div>
 
+                            <div id="import-order-status" class="notice notice-info" style="display: none;"></div>
+
                             <p class="submit">
                                 <input type="submit" class="button button-primary" value="<?php esc_attr_e('Import Orders', 'wc-bulk-order-importer'); ?>">
                                 <button type="button" id="reset-order-import" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
@@ -716,8 +752,16 @@ class WC_Bulk_Order_Generator {
                         </form>
                     </div>
 
+                    <br>
+                    <br>
+                    <br>
+                    <hr>
+                    <hr>
+                    <br>
+                    <br>
                     <!-- Product import  -->
                     <div class="import-section">
+                        <h2><?php esc_html_e('Product Import', 'wc-bulk-order-generator'); ?></h2>
                         <form id="product-import-form" enctype="multipart/form-data">
                             
                             <table class="form-table enhanced-import-settings">
@@ -742,7 +786,7 @@ class WC_Bulk_Order_Generator {
                                         </div>
                                         <p class="description"><?php esc_html_e('Upload a CSV file with product details', 'wc-bulk-product-importer'); ?></p>
                                         <div class="file-upload-validation">
-                                            <small><?php esc_html_e('Accepted: .csv | Drag & Drop', 'wc-bulk-product-importer'); ?></small>
+                                            <small><?php esc_html_e('Accepted: .csv | 50MB only | Use only WC Bulk Generator CSV ', 'wc-bulk-product-importer'); ?></small>
                                         </div>
                                     </td>
                                 </tr>
@@ -754,6 +798,12 @@ class WC_Bulk_Order_Generator {
                                         <input type="number" id="product-import-batch-size" name="batch_size" 
                                             value="10" min="5" max="30">
                                         <p class="description"><?php esc_html_e('Number of products to process per batch (5-30)', 'wc-bulk-product-importer'); ?></p>
+                                        
+                                        <div class="poc-note">
+                                            <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                            <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                        </div>
+
                                     </td>
                                 </tr>
                             </table>
@@ -785,6 +835,8 @@ class WC_Bulk_Order_Generator {
                                 </div>
                             </div>
 
+                            <div id="import-product-status" class="notice notice-info" style="display: none;"></div>
+
                             <p class="submit">
                                 <input type="submit" class="button button-primary" value="<?php esc_attr_e('Import Products', 'wc-bulk-product-importer'); ?>">
                                 <button type="button" id="reset-product-import" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-product-importer'); ?></button>
@@ -797,13 +849,19 @@ class WC_Bulk_Order_Generator {
 
                 <div id="action" class="tab-content">
                     <div class="wrap">
-                        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+                        <h1> <?php esc_html_e('Delete Order/Product', 'wc-bulk-order-generator'); ?></h1>
                         
                         <div class="poc-container">
                             <div class="poc-warning">
                                 <p><strong><?php esc_html_e('Warning:', 'wc-bulk-order-generator'); ?></strong> 
                                 <?php esc_html_e('These actions permanently delete data and cannot be undone. Please backup your database before proceeding.', 'wc-bulk-order-generator'); ?></p>
                             </div>
+                            <div class="poc-note">
+                                <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
+                                <?php esc_html_e('If any new orders or products are found, or if errors occur during deletion, they will be automatically adjusted in deletion process. Reloading or resetting the page during deletion may interrupt the batch process.', 'wc-bulk-order-generator'); ?></p>
+                            </div>
+                            <br>
+                            <br>
 
                             <!-- Delete Products Card -->
                             <div class="poc-card">
@@ -832,6 +890,8 @@ class WC_Bulk_Order_Generator {
                                         
                                     </p>
                                 </div>
+
+                                <div id="delete-product" class="notice notice-info" style="display: none;"></div>
                                 
                                 <button type="button" id="delete-products-btn" class="poc-btn delete">
                                     <span class="poc-spinner" style="display: none;"></span>
@@ -861,6 +921,8 @@ class WC_Bulk_Order_Generator {
                                     </p>
                                 </div>
                                 
+                                <div id="delete-order" class="notice notice-info" style="display: none;"></div>
+
                                 <button type="button" id="delete-orders-btn" class="poc-btn delete">
                                     <span class="poc-spinner" style="display: none;"></span>
                                     <?php esc_html_e('Delete All Orders', 'wc-bulk-order-generator'); ?>

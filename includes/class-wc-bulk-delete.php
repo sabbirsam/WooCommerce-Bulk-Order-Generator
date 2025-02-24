@@ -38,7 +38,7 @@ class WC_Bulk_Delete {
             'return' => 'ids',
         )));
     
-        error_log('Product count: ' . $product_count . ', Order count: ' . $order_count);
+        // error_log('Product count: ' . $product_count . ', Order count: ' . $order_count);
     
         wp_send_json_success(array(
             'product_count' => (int)$product_count,
@@ -75,14 +75,14 @@ class WC_Bulk_Delete {
                 wp_cache_delete('order-' . $order->get_id(), 'orders');
                 if ($order->delete(true)) {
                     $deleted++;
-                    error_log('Successfully deleted order ID: ' . $order->get_id());
+                    // error_log('Successfully deleted order ID: ' . $order->get_id());
                 } else {
                     $skipped++;
                     $errors[] = array(
                         'id' => $order->get_id(),
                         'error' => 'Failed to delete order'
                     );
-                    error_log('Failed to delete order ID: ' . $order->get_id());
+                    // error_log('Failed to delete order ID: ' . $order->get_id());
                 }
             } catch (Exception $e) {
                 $skipped++;
@@ -95,7 +95,7 @@ class WC_Bulk_Delete {
         }
     
         if (!empty($errors)) {
-            error_log('Errors during batch deletion: ' . print_r($errors, true));
+            // error_log('Errors during batch deletion: ' . print_r($errors, true));
         }
     
         wp_send_json_success(array(
@@ -170,7 +170,7 @@ class WC_Bulk_Delete {
         }
     
         if (!empty($errors)) {
-            error_log('Errors during batch deletion: ' . print_r($errors, true));
+            // error_log('Errors during batch deletion: ' . print_r($errors, true));
         }
     
         wp_send_json_success(array(

@@ -535,10 +535,12 @@ jQuery(document).ready(function($) {
                     
                     // Disable export button during process
                     $('#start-order-export').prop('disabled', true);
+                    $('#export-order-status').text('Exporting start').removeClass().addClass('notice notice-success').show();
                     
                     processExportBatch(0, response.data.export_session);
                 } else {
                     showToast('Export initialization failed: ' + response.data, 'error');
+                    $('#export-order-status').hide();
                 }
             }
         });
@@ -576,7 +578,7 @@ jQuery(document).ready(function($) {
                     } else {
                         exportIsGenerating = false;
                         $('#start-order-export').prop('disabled', false);
-                        
+                        $('#export-order-status').hide();
                         // Trigger file download
                         window.location.href = response.data.download_url;
                     }
@@ -940,8 +942,8 @@ jQuery(document).ready(function($) {
         }
 
         // Additional size check (optional)
-        if (csvFile.size > 5 * 1024 * 1024) {
-            showToast('File size exceeds 5MB limit', 'warning');
+        if (csvFile.size > 50 * 1024 * 1024) {
+            showToast('File size exceeds 50MB limit', 'warning');
             e.preventDefault();
             return false;
         }
@@ -1087,8 +1089,8 @@ jQuery(document).ready(function($) {
         }
 
         // Additional size check (optional)
-        if (csvFile.size > 5 * 1024 * 1024) {
-            showToast('File size exceeds 5MB limit', 'warning');
+        if (csvFile.size > 50 * 1024 * 1024) {
+            showToast('File size exceeds 50MB limit', 'warning');
             return false;
         }
     
@@ -1372,6 +1374,8 @@ jQuery(document).ready(function($) {
                     const newTotalProcessed = totalProcessed + batchProcessed;
                     const newSkipped = skipped + (response.data.skipped || 0);
                     const percentage = Math.round((newTotalProcessed / total) * 100);
+
+                    $('#delete-order').text('Deleting orders...').removeClass().addClass('notice notice-info').show();
     
                     $(`#${type}-progress-bar`).css('width', percentage + '%');
                     $(`#${type}-processed`).text(newTotalProcessed);
@@ -1445,7 +1449,7 @@ jQuery(document).ready(function($) {
                         }, 5000);
                         return;
                     }
-                    
+
                     // Show detailed results in a notice
                     const noticeHtml = `
                         <div class="notice notice-success">
@@ -1454,7 +1458,7 @@ jQuery(document).ready(function($) {
                     `;
                     
                     // Insert the notice at the top of the page
-                    $('.wrap h2').after(noticeHtml);
+                    $('#delete-order').after(noticeHtml);
                     
 
                 } else {
@@ -1523,6 +1527,8 @@ jQuery(document).ready(function($) {
         
         // Hide spinner if it was visible
         $(`#delete-${type}s-btn .poc-spinner`).hide();
+        
+        $(`#delete-${type}`).hide();
 
         // Show toast notification
         showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} progress has been reset successfully!`, 'success');
