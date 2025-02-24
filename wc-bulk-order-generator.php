@@ -62,6 +62,7 @@ class WC_Bulk_Order_Generator {
     private $order_export;
     private $product_export;
     private $order_import;
+    private $product_import;
     private $bulk_delete;
 
     /**
@@ -102,6 +103,7 @@ class WC_Bulk_Order_Generator {
             'WC_Bulk_Product_Export' => 'includes/class-bulk-product-export.php',
             'WC_Bulk_Order_Import' => 'includes/class-wc-bulk-order-import.php',
             'WC_Bulk_Delete' => 'includes/class-wc-bulk-delete.php',
+            'WC_Bulk_Product_Import' => 'includes/class-bulk-product-Import.php',
         ];
     
         foreach ($dependencies as $class_name => $file_path) {
@@ -129,6 +131,7 @@ class WC_Bulk_Order_Generator {
         $this->order_export = new WC_Bulk_Order_Export();
         $this->product_export = new WC_Bulk_Product_Export();
         $this->order_import = new WC_Bulk_Order_Import();
+        $this->product_import = new WC_Bulk_Product_Import();
         $this->bulk_delete = new WC_Bulk_Delete();
     }
 
@@ -298,6 +301,7 @@ class WC_Bulk_Order_Generator {
             'export_nonce' => wp_create_nonce('export_orders_nonce'),
             'export_products_nonce' => wp_create_nonce('export_products_nonce'),
             'import_nonce' => wp_create_nonce('import_orders_nonce'),
+            'import_products_nonce' => wp_create_nonce('import_products_nonce'),
             'poc_nonce' => wp_create_nonce('poc_ajax_nonce')
         ));
     }
@@ -711,6 +715,83 @@ class WC_Bulk_Order_Generator {
                             </p>
                         </form>
                     </div>
+
+                    <!-- Product import  -->
+                    <div class="import-section">
+                        <form id="product-import-form" enctype="multipart/form-data">
+                            
+                            <table class="form-table enhanced-import-settings">
+                                <tr>
+                                    <th scope="row">
+                                        <label for="product-import-csv"><?php esc_html_e('CSV File', 'wc-bulk-product-importer'); ?></label>
+                                    </th>
+                                    <td>
+                                        <div class="file-upload-wrapper">
+                                            <input type="file" 
+                                                id="product-import-csv" 
+                                                name="csv_file" 
+                                                accept=".csv" 
+                                                class="file-upload-input" 
+                                                required>
+                                            <div class="file-upload-preview">
+                                                <div class="upload-placeholder">
+                                                    <i class="upload-icon">📤</i>
+                                                    <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="description"><?php esc_html_e('Upload a CSV file with product details', 'wc-bulk-product-importer'); ?></p>
+                                        <div class="file-upload-validation">
+                                            <small><?php esc_html_e('Accepted: .csv | Drag & Drop', 'wc-bulk-product-importer'); ?></small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">
+                                        <label for="product-import-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-product-importer'); ?></label>
+                                    </th>
+                                    <td>
+                                        <input type="number" id="product-import-batch-size" name="batch_size" 
+                                            value="10" min="5" max="30">
+                                        <p class="description"><?php esc_html_e('Number of products to process per batch (5-30)', 'wc-bulk-product-importer'); ?></p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <div class="progress-wrapper">
+                                <div class="product-import-progress-bar"></div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-import-total-processed"><?php esc_html_e('0', 'wc-bulk-product-importer'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Total Processed', 'wc-bulk-product-importer'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-import-success-count"><?php esc_html_e('0', 'wc-bulk-product-importer'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Successful', 'wc-bulk-product-importer'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-import-failed-count"><?php esc_html_e('0', 'wc-bulk-product-importer'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-product-importer'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-import-skipped-count"><?php esc_html_e('0', 'wc-bulk-product-importer'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Skipped', 'wc-bulk-product-importer'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-import-elapsed-time"><?php esc_html_e('0s', 'wc-bulk-product-importer'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Elapsed Time', 'wc-bulk-product-importer'); ?></div>
+                                </div>
+                            </div>
+
+                            <p class="submit">
+                                <input type="submit" class="button button-primary" value="<?php esc_attr_e('Import Products', 'wc-bulk-product-importer'); ?>">
+                                <button type="button" id="reset-product-import" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-product-importer'); ?></button>
+                            </p>
+                        </form>
+                    </div>
+                    
 
                 </div>
 

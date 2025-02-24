@@ -1036,6 +1036,206 @@ jQuery(document).ready(function($) {
 
 });
 
+
+// Product import ----------------------------
+
+// Add this to your existing jQuery document ready function
+jQuery(document).ready(function($) {
+    
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
+        
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Product Import Form Submission
+    $('#product-import-form').on('submit', function(e) {
+        e.preventDefault();
+
+        const csvFile = $('#product-import-csv')[0].files[0];
+        
+        // Validate file type and extension
+        if (!csvFile) {
+            showToast('Please select a CSV file', 'warning');
+            return false;
+        }
+
+        const allowedTypes = ['text/csv', 'application/vnd.ms-excel'];
+        const validExtension = csvFile.name.toLowerCase().endsWith('.csv');
+
+        if (!allowedTypes.includes(csvFile.type) && !validExtension) {
+            showToast('Invalid file type. Please upload a .csv file', 'error');
+            return false;
+        }
+
+        // Additional size check (optional)
+        if (csvFile.size > 5 * 1024 * 1024) {
+            showToast('File size exceeds 5MB limit', 'warning');
+            return false;
+        }
+    
+        var formData = new FormData(this);
+        formData.append('action', 'import_products');
+        formData.append('nonce', wcOrderGenerator.import_products_nonce); // Use the same nonce or create a new one
+        formData.append('current_batch', 0);
+    
+        var startTime = Date.now();
+        var totalProducts = 0;
+        var totalImportedCount = 0;
+        var totalFailedCount = 0;
+        var totalSkippedCount = 0;
+    
+        function processNextBatch(formData) {
+            $.ajax({
+                url: wcOrderGenerator.ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        var endTime = Date.now();
+                        var elapsedTime = Math.floor((endTime - startTime) / 1000);
+    
+                        totalProducts = response.data.total_products;
+                        totalImportedCount += response.data.successful;
+                        totalFailedCount += response.data.failed;
+                        totalSkippedCount += response.data.skipped;
+    
+                        $('#product-import-total-processed').text(totalImportedCount + totalFailedCount + totalSkippedCount);
+                        $('#product-import-success-count').text(totalImportedCount);
+                        $('#product-import-failed-count').text(totalFailedCount);
+                        $('#product-import-skipped-count').text(totalSkippedCount);
+                        $('#product-import-elapsed-time').text(elapsedTime + 's');
+    
+                        // Update progress bar based on actual progress
+                        var progressPercentage = Math.floor(((response.data.current_batch * parseInt(formData.get('batch_size')) + response.data.processed) / totalProducts) * 100);
+                        $('.product-import-progress-bar').css({
+                            'width': progressPercentage + '%',
+                            'background-color': 'blue',
+                            'height': '25px',
+                            'transition': 'width 0.5s ease-in-out'
+                        });
+    
+                        // Check if import is complete
+                        if (response.data.is_complete) {
+                            showToast('Product Import complete!', 'success');
+                            $('.product-import-progress-bar').css('background-color', 'green');
+                            return;
+                        }
+    
+                        // Prepare next batch
+                        var nextBatchData = new FormData();
+                        nextBatchData.append('action', 'import_products');
+                        nextBatchData.append('nonce', wcOrderGenerator.import_products_nonce);
+                        nextBatchData.append('current_batch', response.data.current_batch + 1);
+                        nextBatchData.append('csv_file', formData.get('csv_file'));
+                        nextBatchData.append('batch_size', formData.get('batch_size'));
+    
+                        // Process next batch with a small delay to prevent server overload
+                        setTimeout(function() {
+                            processNextBatch(nextBatchData);
+                        }, 300);
+                    } else {
+                        showToast('Product Import failed: ' + (response.data || 'Unknown error'), 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    showToast('Server error occurred: ' + error, 'error');
+                }
+            });
+        }
+    
+        // Start batch processing
+        processNextBatch(formData);
+    });
+    
+    // Reset product import form
+    $('#reset-product-import').on('click', function() {
+        $('.product-import-progress-bar').css('width', '0%');
+        $('#product-import-total-processed, #product-import-success-count, #product-import-failed-count, #product-import-skipped-count').text('0');
+        $('#product-import-elapsed-time').text('0s');
+        
+        // Reset file upload
+        $('#product-import-csv').val('');
+        $('#product-import-form .file-upload-preview').html(`
+            <div class="upload-placeholder">
+                <i class="upload-icon">📤</i>
+                <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
+            </div>
+        `);
+    });
+    
+    // Add file upload preview functionality for product import
+    $('#product-import-csv').on('change', function() {
+        const file = this.files[0];
+        const previewElement = $(this).siblings('.file-upload-preview');
+        
+        if (file) {
+            previewElement.html(`
+                <div class="file-preview">
+                    <i class="file-icon">📄</i>
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">(${(file.size / 1024).toFixed(2)} KB)</span>
+                </div>
+            `);
+        } else {
+            previewElement.html(`
+                <div class="upload-placeholder">
+                    <i class="upload-icon">📤</i>
+                    <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
+                </div>
+            `);
+        }
+    });
+    
+    // Add drag and drop functionality for product import
+    const productDropArea = $('#product-import-form .file-upload-wrapper');
+    
+    productDropArea.on('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).addClass('dragover');
+    });
+    
+    productDropArea.on('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).removeClass('dragover');
+    });
+    
+    productDropArea.on('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).removeClass('dragover');
+        
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length) {
+            $('#product-import-csv')[0].files = files;
+            $('#product-import-csv').trigger('change');
+        }
+    });
+});
+
+
 // Delete Functionality 
 jQuery(document).ready(function($) {
     const RETRY_DELAY = 3000; 
