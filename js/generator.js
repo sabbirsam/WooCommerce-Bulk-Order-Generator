@@ -644,7 +644,251 @@ jQuery(document).ready(function($) {
    
 });
 
+// product export ----------------
 
+jQuery(document).ready(function($) {
+
+    if (!$('#toast-container').length) {
+        $('body').append('<div id="toast-container" style="position: fixed; top: 40px; right: 20px; z-index: 10000;"></div>');
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="wc-toast ${type}">
+                ${message}
+            </div>
+        `);
+        
+        $('#toast-container').append(toast);
+        
+        // Trigger reflow and animate in
+        setTimeout(() => toast.css('opacity', '1'), 10);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.css('opacity', '0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Product Export functionality
+    let productExportIsGenerating = false;
+    let productExportTotalProducts = 0;
+    let productExportStartTime = 0;
+    let exportFailedAttempts = 0;
+    const MAX_FAILED_ATTEMPTS = 3;
+    let exportTimeout;
+
+    $('#product-export-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const batchSize = parseInt($('#product-export-batch-size').val());
+        const productTypes = $('#product-type').val() || [];
+        const categories = $('#product-category').val() || [];
+        const tags = $('#product-tag').val() || [];
+        
+        // Reset any previous export state
+        exportFailedAttempts = 0;
+        clearTimeout(exportTimeout);
+        
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'start_product_export',
+                nonce: wcOrderGenerator.export_products_nonce,
+                batch_size: batchSize,
+                product_types: productTypes,
+                categories: categories,
+                tags: tags
+            },
+            success: function(response) {
+                if (response.success) {
+                    productExportIsGenerating = true;
+                    productExportTotalProducts = response.data.total_products;
+                    productExportStartTime = Date.now();
+                    
+                    // Show total products that will be exported
+                    showToast(`Starting export of ${productExportTotalProducts} products`, 'info');
+                    
+                    // Disable export button during process
+                    $('#start-product-export').prop('disabled', true);
+                    
+                    // Initialize progress display
+                    $('#product-export-total-processed').text('0');
+                    $('#product-export-success-count').text('0');
+                    $('#product-export-failed-count').text('0');
+                    $('#product-export-elapsed-time').text('0s');
+                    $('#product-export-time-remaining').text('--');
+                    $('.product-export-progress-bar').css('width', '0%');
+                    
+                    processProductExportBatch(0, response.data.export_session);
+                } else {
+                    showToast('Product export initialization failed: ' + response.data, 'error');
+                }
+            },
+            error: function() {
+                showToast('Connection error when starting export', 'error');
+                $('#start-product-export').prop('disabled', false);
+            }
+        });
+    });
+
+    function processProductExportBatch(batchNumber, exportSession) {
+        const batchSize = parseInt($('#product-export-batch-size').val());
+        const productTypes = $('#product-type').val() || [];
+        const categories = $('#product-category').val() || [];
+        const tags = $('#product-tag').val() || [];
+        const totalBatches = Math.ceil(productExportTotalProducts / batchSize);
+        
+        // Set a timeout to detect stalled exports (30 seconds)
+        clearTimeout(exportTimeout);
+        exportTimeout = setTimeout(function() {
+            if (productExportIsGenerating) {
+                handleExportTimeout(batchNumber, exportSession);
+            }
+        }, 60000);
+        
+        $.ajax({
+            url: wcOrderGenerator.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'export_product_batch',
+                nonce: wcOrderGenerator.export_products_nonce,
+                batch_size: batchSize,
+                batch_number: batchNumber,
+                total_batches: totalBatches,
+                product_types: productTypes,
+                categories: categories,
+                tags: tags,
+                export_session: exportSession
+            },
+            success: function(response) {
+                clearTimeout(exportTimeout);
+                
+                if (response.success) {
+                    exportFailedAttempts = 0; // Reset failed attempts on success
+                    
+                    const processed = (batchNumber + 1) * batchSize;
+                    updateProductExportProgress(
+                        Math.min(processed, productExportTotalProducts), 
+                        response.data.success, 
+                        response.data.failed
+                    );
+                    
+                    if (!response.data.is_last_batch) {
+                        processProductExportBatch(batchNumber + 1, exportSession);
+                    } else {
+                        productExportIsGenerating = false;
+                        $('#start-product-export').prop('disabled', false);
+                        
+                        // Complete the progress bar to 100%
+                        $('.product-export-progress-bar').css('width', '100%');
+                        
+                        showToast('Export completed successfully!', 'success');
+                        
+                        // Trigger file download
+                        if (response.data.download_url) {
+                            window.location.href = response.data.download_url;
+                        } else {
+                            showToast('Download URL not available', 'error');
+                        }
+                    }
+                } else {
+                    handleExportError(batchNumber, exportSession, 'Product export batch failed: ' + response.data);
+                }
+            },
+            error: function() {
+                clearTimeout(exportTimeout);
+                handleExportError(batchNumber, exportSession, 'Connection error during export');
+            }
+        });
+    }
+
+    function handleExportTimeout(batchNumber, exportSession) {
+        handleExportError(batchNumber, exportSession, 'Export operation timed out');
+    }
+    
+    function handleExportError(batchNumber, exportSession, message) {
+        exportFailedAttempts++;
+        
+        if (exportFailedAttempts < MAX_FAILED_ATTEMPTS) {
+            showToast(`${message}. Retrying... (Attempt ${exportFailedAttempts}/${MAX_FAILED_ATTEMPTS})`, 'warning');
+            // Wait 2 seconds before retrying
+            setTimeout(function() {
+                processProductExportBatch(batchNumber, exportSession);
+            }, 2000);
+        } else {
+            showToast(`Export failed after ${MAX_FAILED_ATTEMPTS} attempts. Please try again.`, 'error');
+            productExportIsGenerating = false;
+            $('#start-product-export').prop('disabled', false);
+        }
+    }
+
+    function formatDuration(ms) {
+        const seconds = Math.floor(ms / 1000) % 60;
+        const minutes = Math.floor(ms / (1000 * 60)) % 60;
+        const hours = Math.floor(ms / (1000 * 60 * 60));
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${seconds}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    }
+    
+
+    function updateProductExportProgress(processed, success, failed) {
+        // Ensure productExportTotalProducts is initialized and greater than 0
+        if (!productExportTotalProducts || productExportTotalProducts <= 0) {
+            showToast("Number of products to export not found!", 'info');
+            return;
+        }
+
+        const percentage = Math.min((processed / productExportTotalProducts) * 100, 100); // Ensure it does not exceed 100%
+        
+        // Ensure progress bar width is set correctly
+        $('.product-export-progress-bar').css({
+            'width': percentage + '%',
+            'background-color': 'green',
+            'height': '25px',
+            'transition': 'width 0.5s ease-in-out'
+        });
+
+        // Update processed, success, and failed counts
+        $('#product-export-total-processed').text(processed);
+        $('#product-export-success-count').text(success);
+        $('#product-export-failed-count').text(failed);
+
+        // Calculate elapsed time and handle NaN
+        const currentTime = Date.now();
+        const elapsedTime = productExportStartTime ? currentTime - productExportStartTime : 0;
+        $('#product-export-elapsed-time').text(elapsedTime > 0 ? formatDuration(elapsedTime) : '0s');
+
+        // Calculate products per second and handle NaN
+        const productsPerSecond = elapsedTime > 0 ? processed / (elapsedTime / 1000) : 0;
+
+        // Calculate remaining time and handle NaN
+        const remainingProducts = productExportTotalProducts - processed;
+        const estimatedSecondsRemaining = productsPerSecond > 0 ? remainingProducts / productsPerSecond : 0;
+        $('#product-export-time-remaining').text(estimatedSecondsRemaining > 0 ? formatDuration(estimatedSecondsRemaining * 1000) : '0s');
+    }
+
+    // Reset product export
+    $('#reset-product-export').on('click', function() {
+        clearTimeout(exportTimeout);
+        productExportIsGenerating = false;
+        exportFailedAttempts = 0;
+        $('.product-export-progress-bar').css('width', '0%');
+        $('#product-export-total-processed, #product-export-success-count, #product-export-failed-count').text('0');
+        $('#product-export-elapsed-time').text('0s');
+        $('#product-export-time-remaining').text('--');
+        $('#start-product-export').prop('disabled', false);
+    });
+
+});
 
 // Import 
 jQuery(document).ready(function($) {

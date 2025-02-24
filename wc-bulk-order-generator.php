@@ -60,6 +60,7 @@ class WC_Bulk_Order_Generator {
      */
     private $product_generator;
     private $order_export;
+    private $product_export;
     private $order_import;
     private $bulk_delete;
 
@@ -98,6 +99,7 @@ class WC_Bulk_Order_Generator {
         $dependencies = [
             'WC_Bulk_Product_Generator' => 'includes/class-wc-bulk-product-generator.php',
             'WC_Bulk_Order_Export' => 'includes/class-wc-bulk-order-export.php',
+            'WC_Bulk_Product_Export' => 'includes/class-bulk-product-export.php',
             'WC_Bulk_Order_Import' => 'includes/class-wc-bulk-order-import.php',
             'WC_Bulk_Delete' => 'includes/class-wc-bulk-delete.php',
         ];
@@ -125,6 +127,7 @@ class WC_Bulk_Order_Generator {
         // Instantiate the classes dynamically
         $this->product_generator = new WC_Bulk_Product_Generator();
         $this->order_export = new WC_Bulk_Order_Export();
+        $this->product_export = new WC_Bulk_Product_Export();
         $this->order_import = new WC_Bulk_Order_Import();
         $this->bulk_delete = new WC_Bulk_Delete();
     }
@@ -293,6 +296,7 @@ class WC_Bulk_Order_Generator {
             'product_batch_size' => $settings['product_batch_size'],
             'max_products' => $settings['max_products'],
             'export_nonce' => wp_create_nonce('export_orders_nonce'),
+            'export_products_nonce' => wp_create_nonce('export_products_nonce'),
             'import_nonce' => wp_create_nonce('import_orders_nonce'),
             'poc_nonce' => wp_create_nonce('poc_ajax_nonce')
         ));
@@ -542,6 +546,92 @@ class WC_Bulk_Order_Generator {
                             </div>
                         </form>
                     </div>
+
+
+                     <!-- Product Export section -->
+                    <div class="export-section">
+                        <h2><?php esc_html_e('Product Export', 'wc-bulk-order-generator'); ?></h2>
+                        <form id="product-export-form">
+                            <div class="setting-card">
+                                <label for="product-export-batch-size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
+                                <input type="number" id="product-export-batch-size" name="product-export-batch-size" 
+                                    value="10" min="5" max="30">
+                                <p class="description"><?php esc_html_e('Number of products to export per batch (5-30)', 'wc-bulk-order-generator'); ?></p>
+                            </div>
+
+                            <div class="setting-card">
+                                <label for="product-type"><?php esc_html_e('Product Type', 'wc-bulk-order-generator'); ?></label>
+                                <select id="product-type" name="product-type" multiple>
+                                    <?php
+                                    $product_types = wc_get_product_types();
+                                    foreach ($product_types as $type => $label) {
+                                        echo '<option value="' . esc_attr($type) . '">' . esc_html($label) . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="setting-card">
+                                <label for="product-category"><?php esc_html_e('Product Category', 'wc-bulk-order-generator'); ?></label>
+                                <select id="product-category" name="product-category" multiple>
+                                    <?php
+                                    $product_categories = get_terms(['taxonomy' => 'product_cat', 'hide_empty' => false]);
+                                    foreach ($product_categories as $category) {
+                                        echo '<option value="' . esc_attr($category->term_id) . '">' . esc_html($category->name) . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="setting-card">
+                                <label for="product-tag"><?php esc_html_e('Product Tag', 'wc-bulk-order-generator'); ?></label>
+                                <select id="product-tag" name="product-tag" multiple>
+                                    <?php
+                                    $product_tags = get_terms(['taxonomy' => 'product_tag', 'hide_empty' => false]);
+                                    foreach ($product_tags as $tag) {
+                                        echo '<option value="' . esc_attr($tag->term_id) . '">' . esc_html($tag->name) . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+
+                            <div class="progress-wrapper">
+                                <div class="product-export-progress-bar"></div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-export-total-processed"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Total Processed', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-export-success-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Successful', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-export-failed-count"><?php esc_html_e('0', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Failed', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-export-elapsed-time"><?php esc_html_e('0s', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Elapsed Time', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="product-export-time-remaining"><?php esc_html_e('--', 'wc-bulk-order-generator'); ?></div>
+                                    <div class="stat-label"><?php esc_html_e('Estimated Time Remaining', 'wc-bulk-order-generator'); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="control-buttons">
+                                <input type="submit" id="start-product-export" class="button button-primary" value="<?php esc_attr_e('Export Products', 'wc-bulk-order-generator'); ?>">
+                                <button type="button" id="reset-product-export" class="button button-secondary"><?php esc_html_e('Reset', 'wc-bulk-order-generator'); ?></button>
+                            </div>
+                        </form>
+                    </div>
+
 
                 </div>
 
