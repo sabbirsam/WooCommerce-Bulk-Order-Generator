@@ -1,4 +1,3 @@
-
 // Tabs ----------------------------------------
 jQuery(document).ready(function($) {
     // Check localStorage for the last active tab
@@ -32,21 +31,6 @@ jQuery(document).ready(function($) {
     });
 });
 
-// CSV importer ---------------------------------
-jQuery(document).ready(function($) {
-    $('.file-upload-input').on('change', function(e) {
-        const file = e.target.files[0];
-        const $preview = $('.file-upload-preview');
-        
-        if (file) {
-            $preview.html(` 
-                <div class="file-name-display">
-                    📄 ${file.name}
-                </div>
-            `);
-        }
-    });
-});
 
 // --------------Order -------------------------------------
 jQuery(document).ready(function($) {
@@ -923,7 +907,7 @@ jQuery(document).ready(function($) {
     $('#order-import-form').on('submit', function (e) {
         e.preventDefault();
 
-        const csvFile = $('.file-upload-input')[0].files[0];
+        const csvFile = $('#order-import-form .file-upload-input')[0].files[0];
         
         // Validate file type and extension
         if (!csvFile) {
@@ -952,11 +936,15 @@ jQuery(document).ready(function($) {
         formData.append('action', 'import_orders');
         formData.append('nonce', wcOrderGenerator.import_nonce);
         formData.append('current_batch', 0);
-    
+        // Initialize cumulative counters
+        formData.append('skipped', 0);
+        formData.append('successful', 0);
+
         var startTime = Date.now();
         var totalOrders = 0;
         var totalImportedCount = 0;
-    
+        var totalSkippedCount = 0;
+
         function processNextBatch(formData) {
             $.ajax({
                 url: wcOrderGenerator.ajaxurl,
@@ -968,32 +956,33 @@ jQuery(document).ready(function($) {
                     if (response.success) {
                         var endTime = Date.now();
                         var elapsedTime = Math.floor((endTime - startTime) / 1000);
-    
+
                         totalOrders = response.data.total_orders;
-                        totalImportedCount += response.data.successful;
-    
-                        $('#import-total-processed').text(totalImportedCount);
+                        totalImportedCount = response.data.successful;
+                        totalSkippedCount = response.data.skipped;
+
+                        $('#import-total-processed').text(totalImportedCount + totalSkippedCount);
                         $('#import-success-count').text(totalImportedCount);
                         $('#import-failed-count').text(response.data.failed);
-                        $('#import-skipped-count').text(response.data.skipped);
+                        $('#import-skipped-count').text(totalSkippedCount);
                         $('#import-elapsed-time').text(elapsedTime + 's');
-    
+
                         // Update progress bar based on actual progress
-                        var progressPercentage = Math.floor((totalImportedCount / totalOrders) * 100);
+                        var progressPercentage = Math.floor(((totalImportedCount + totalSkippedCount) / totalOrders) * 100);
                         $('.import-progress-bar').css({
                             'width': progressPercentage + '%',
                             'background-color': 'blue',
                             'height': '25px',
                             'transition': 'width 0.5s ease-in-out'
                         });
-    
+
                         // Check if import is complete
                         if (response.data.is_complete) {
                             showToast('Order Import complete!', 'success');
                             $('.import-progress-bar').css('background-color', 'green');
                             return;
                         }
-    
+
                         // Prepare next batch
                         var nextBatchData = new FormData();
                         nextBatchData.append('action', 'import_orders');
@@ -1001,7 +990,10 @@ jQuery(document).ready(function($) {
                         nextBatchData.append('current_batch', response.data.current_batch + 1);
                         nextBatchData.append('csv_file', formData.get('csv_file'));
                         nextBatchData.append('batch_size', formData.get('batch_size'));
-    
+                        // Pass cumulative counters
+                        nextBatchData.append('skipped', totalSkippedCount);
+                        nextBatchData.append('successful', totalImportedCount);
+
                         // Process next batch
                         processNextBatch(nextBatchData);
                     } else {
@@ -1013,7 +1005,7 @@ jQuery(document).ready(function($) {
                 }
             });
         }
-    
+
         // Start batch processing
         processNextBatch(formData);
     });
@@ -1027,13 +1019,24 @@ jQuery(document).ready(function($) {
         $('#import-elapsed-time').text('0s');
         
         // Reset file upload
-        $('.file-upload-input').val('');
-        $('.file-upload-preview').html(`
+        $('#order-import-form .file-upload-input').val('');
+        $('#order-import-form .file-upload-preview').html(`
             <div class="upload-placeholder">
                 <i class="upload-icon">📤</i>
                 <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
             </div>
         `);
+    });
+
+    // Order Import: Use a unique selector for the file input and preview
+    $('#order-import-form .file-upload-input').on('change', function() {
+        const file = this.files[0];
+        const preview = $('#order-import-form .file-upload-preview');
+        if (file) {
+            preview.html(`<div class="upload-file-info"><i class="upload-icon">📄</i> <span class="upload-text">${file.name}</span></div>`);
+        } else {
+            preview.html(`<div class="upload-placeholder"><i class="upload-icon">📤</i><span class="upload-text">Drag & Drop or Click to Upload CSV</span></div>`);
+        }
     });
 
 });
@@ -1072,7 +1075,7 @@ jQuery(document).ready(function($) {
     $('#product-import-form').on('submit', function(e) {
         e.preventDefault();
 
-        const csvFile = $('#product-import-csv')[0].files[0];
+        const csvFile = $('#product-import-form .file-upload-input')[0].files[0];
         
         // Validate file type and extension
         if (!csvFile) {
@@ -1177,7 +1180,7 @@ jQuery(document).ready(function($) {
         $('#product-import-elapsed-time').text('0s');
         
         // Reset file upload
-        $('#product-import-csv').val('');
+        $('#product-import-form .file-upload-input').val('');
         $('#product-import-form .file-upload-preview').html(`
             <div class="upload-placeholder">
                 <i class="upload-icon">📤</i>
@@ -1186,26 +1189,14 @@ jQuery(document).ready(function($) {
         `);
     });
     
-    // Add file upload preview functionality for product import
-    $('#product-import-csv').on('change', function() {
+    // Product Import: Use a unique selector for the file input and preview
+    $('#product-import-form .file-upload-input').on('change', function() {
         const file = this.files[0];
-        const previewElement = $(this).siblings('.file-upload-preview');
-        
+        const preview = $('#product-import-form .file-upload-preview');
         if (file) {
-            previewElement.html(`
-                <div class="file-preview">
-                    <i class="file-icon">📄</i>
-                    <span class="file-name">${file.name}</span>
-                    <span class="file-size">(${(file.size / 1024).toFixed(2)} KB)</span>
-                </div>
-            `);
+            preview.html(`<div class="upload-file-info"><i class="upload-icon">📄</i> <span class="upload-text">${file.name}</span></div>`);
         } else {
-            previewElement.html(`
-                <div class="upload-placeholder">
-                    <i class="upload-icon">📤</i>
-                    <span class="upload-text">Drag & Drop or Click to Upload CSV</span>
-                </div>
-            `);
+            preview.html(`<div class="upload-placeholder"><i class="upload-icon">📤</i><span class="upload-text">Drag & Drop or Click to Upload CSV</span></div>`);
         }
     });
     
@@ -1231,8 +1222,8 @@ jQuery(document).ready(function($) {
         
         const files = e.originalEvent.dataTransfer.files;
         if (files.length) {
-            $('#product-import-csv')[0].files = files;
-            $('#product-import-csv').trigger('change');
+            $('#product-import-form .file-upload-input')[0].files = files;
+            $('#product-import-form .file-upload-input').trigger('change');
         }
     });
 });

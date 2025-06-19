@@ -47,21 +47,24 @@ class WC_Bulk_Order_Import {
     
         foreach ($grouped_orders as $order_id => $order_entries) {
             try {
-                // Check if order with this custom order number already exists
+                // Use first entry for order details
+                $first_entry = $order_entries[0];
+                $order_date = wc_string_to_timestamp($first_entry['date']);
+                $order_total = $first_entry['total'];
+                $customer_email = $first_entry['customer_email'];
+
+                // Check for existing order with same customer, date, and total
                 $existing_orders = wc_get_orders([
-                    'meta_key' => '_order_number',
-                    'meta_value' => $order_id,
-                    'numberposts' => 1
+                    'billing_email' => $customer_email,
+                    'date_created' => date('Y-m-d H:i:s', $order_date),
+                    'total' => $order_total,
+                    'limit' => 1,
+                    'return' => 'ids'
                 ]);
-    
-                // Skip if order already exists
                 if (!empty($existing_orders)) {
                     $skipped++;
                     continue;
                 }
-    
-                // Use first entry for order details
-                $first_entry = $order_entries[0];
     
                 // Create a new WooCommerce order
                 $order = wc_create_order([
@@ -131,6 +134,9 @@ class WC_Bulk_Order_Import {
                 // Save the order
                 $order->save();
     
+                // Set custom imported order ID meta
+                update_post_meta($order->get_id(), '_imported_order_id', $order_id);
+    
                 $successful++;
             } catch (Exception $e) {
                 error_log('Order import error: ' . $e->getMessage());
@@ -156,6 +162,9 @@ class WC_Bulk_Order_Import {
         $file = $_FILES['csv_file']['tmp_name'];
         $batch_size = intval($_POST['batch_size'] ?? 50);
         $current_batch = intval($_POST['current_batch'] ?? 0);
+        // Get running totals from POST, default to 0
+        $skipped_total = intval($_POST['skipped'] ?? 0);
+        $successful_total = intval($_POST['successful'] ?? 0);
     
         $orders = $this->parse_csv($file);
         $total_orders = count($orders);
@@ -165,14 +174,18 @@ class WC_Bulk_Order_Import {
     
         $results = $this->process_orders($batch_orders);
     
+        // Update running totals
+        $skipped_total += $results['skipped'];
+        $successful_total += $results['successful'];
+    
         // Determine if more batches are needed
         $is_complete = ($current_batch * $batch_size + count($batch_orders)) >= $total_orders;
     
         wp_send_json_success([
             'processed' => count($batch_orders),
-            'successful' => $results['successful'],
+            'successful' => $successful_total,
             'failed' => $results['failed'],
-            'skipped' => $results['skipped'],
+            'skipped' => $skipped_total,
             'total_orders' => $total_orders,
             'current_batch' => $current_batch,
             'is_complete' => $is_complete
