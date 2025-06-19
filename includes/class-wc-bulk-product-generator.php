@@ -173,67 +173,6 @@ class WC_Bulk_Product_Generator {
         );
     }
 
-    private function get_final_image_url($url) {
-        $response = wp_remote_head($url, array('redirection' => 5));
-        if (is_wp_error($response)) {
-            error_log('wp_remote_head error for URL ' . $url . ': ' . $response->get_error_message());
-            return $url;
-        }
-        $final_url = wp_remote_retrieve_header($response, 'location');
-        return $final_url ? $final_url : $url;
-    }
-
-    private function download_and_attach_image($image_url, $post_id = 0) {
-        require_once(ABSPATH . 'wp-admin/includes/file.php');
-        require_once(ABSPATH . 'wp-admin/includes/media.php');
-        require_once(ABSPATH . 'wp-admin/includes/image.php');
-        $final_url = $this->get_final_image_url($image_url);
-        $image_id = media_sideload_image($final_url, $post_id, null, 'id');
-        if (is_wp_error($image_id)) {
-            error_log('media_sideload_image error for URL ' . $final_url . ': ' . $image_id->get_error_message());
-            return 0;
-        }
-        return $image_id;
-    }
-
-    private function manual_download_and_attach_image($image_url, $post_id = 0) {
-        // Download image data
-        $response = wp_remote_get($image_url, array('timeout' => 20));
-        if (is_wp_error($response)) {
-            error_log('manual_download_and_attach_image: wp_remote_get error for URL ' . $image_url . ': ' . $response->get_error_message());
-            return 0;
-        }
-        $body = wp_remote_retrieve_body($response);
-        if (empty($body)) {
-            error_log('manual_download_and_attach_image: Empty body for URL ' . $image_url);
-            return 0;
-        }
-        // Get file extension from headers or URL
-        $content_type = wp_remote_retrieve_header($response, 'content-type');
-        $ext = 'jpg';
-        if ($content_type && strpos($content_type, 'png') !== false) $ext = 'png';
-        if ($content_type && strpos($content_type, 'gif') !== false) $ext = 'gif';
-        $filename = 'bulkgen_' . md5($image_url . microtime()) . '.' . $ext;
-        $upload = wp_upload_bits($filename, null, $body);
-        if ($upload['error']) {
-            error_log('manual_download_and_attach_image: wp_upload_bits error for URL ' . $image_url . ': ' . $upload['error']);
-            return 0;
-        }
-        // Create attachment
-        $filetype = wp_check_filetype($upload['file'], null);
-        $attachment = array(
-            'post_mime_type' => $filetype['type'],
-            'post_title' => sanitize_file_name($filename),
-            'post_content' => '',
-            'post_status' => 'inherit'
-        );
-        $attach_id = wp_insert_attachment($attachment, $upload['file'], $post_id);
-        require_once(ABSPATH . 'wp-admin/includes/image.php');
-        $attach_data = wp_generate_attachment_metadata($attach_id, $upload['file']);
-        wp_update_attachment_metadata($attach_id, $attach_data);
-        return $attach_id;
-    }
-
     private function create_product($data) {
         try {
             // Create new product object
@@ -273,7 +212,7 @@ class WC_Bulk_Product_Generator {
             $product->set_status('publish');
             $product->set_catalog_visibility('visible');
             
-            // Save product to get ID
+            // Save product
             $product_id = $product->save();
             
             if (!$product_id) {
@@ -286,51 +225,7 @@ class WC_Bulk_Product_Generator {
                 wp_set_object_terms($product_id, $category_ids, 'product_cat');
             }
             
-            // Add random main image from LoremFlickr with unique timestamp
-            $main_seed = wp_rand(10000, 99999);
-            $main_url = "https://loremflickr.com/600/600?random={$main_seed}&timestamp=" . time() . mt_rand();
-            $main_image_id = $this->download_and_attach_image($main_url, $product_id);
-            if (!$main_image_id) {
-                // Fallback: manual download and attach
-                $main_image_id = $this->manual_download_and_attach_image($main_url, $product_id);
-            }
-            // Set main image after all downloads and save at the end
-            if ($main_image_id) {
-                $product->set_image_id($main_image_id);
-            } else {
-                update_post_meta($product_id, '_thumbnail_ext_url', $main_url);
-                error_log('Failed to download main image for product ID: ' . $product_id . ' URL: ' . $main_url);
-            }
-            
-            // Add 2 random gallery images with unique timestamps
-            $gallery_ids = [];
-            $gallery_urls = [];
-            for ($i = 0; $i < 2; $i++) {
-                $gallery_seed = wp_rand(10000, 99999);
-                $gallery_url = "https://loremflickr.com/600/600?random={$gallery_seed}&timestamp=" . time() . mt_rand();
-                $gallery_id = $this->download_and_attach_image($gallery_url, $product_id);
-                if (!$gallery_id) {
-                    // Fallback: manual download and attach
-                    $gallery_id = $this->manual_download_and_attach_image($gallery_url, $product_id);
-                }
-                if ($gallery_id) {
-                    $gallery_ids[] = $gallery_id;
-                } else {
-                    $gallery_urls[] = $gallery_url;
-                    error_log('Failed to download gallery image for product ID: ' . $product_id . ' URL: ' . $gallery_url);
-                }
-            }
-            if (!empty($gallery_ids)) {
-                $product->set_gallery_image_ids($gallery_ids);
-            }
-            // Fallback: store gallery URLs as meta if download failed
-            if (!empty($gallery_urls)) {
-                update_post_meta($product_id, '_external_gallery_urls', $gallery_urls);
-            }
-            // Save after all image assignments
-            $product->save();
-            
-            // Add placeholder image (optional, fallback)
+            // Add placeholder image
             $this->maybe_add_placeholder_image($product_id);
             
             return $product;
