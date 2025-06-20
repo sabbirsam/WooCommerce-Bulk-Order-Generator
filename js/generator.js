@@ -382,7 +382,8 @@ jQuery(document).ready(function($) {
                 batch_size: currentBatchSize,
                 price_min: $('#price_min').val(),
                 price_max: $('#price_max').val(),
-                batch_number: currentProductBatch
+                batch_number: currentProductBatch,
+                product_types: window.selectedProductTypes
             },
             
             success: function(response) {
@@ -428,6 +429,16 @@ jQuery(document).ready(function($) {
             return;
         }
 
+        // Collect selected product types
+        const productTypes = [];
+        $('#product-generator-form input[name="product_types[]"]:checked').each(function() {
+            productTypes.push($(this).val());
+        });
+        if (productTypes.length === 0) {
+            alert('Please select at least one product type.');
+            return;
+        }
+
         isGeneratingProducts = true;
         totalProducts = numProducts;
         productSuccessCount = 0;
@@ -441,6 +452,8 @@ jQuery(document).ready(function($) {
         $('#product-generation-status').text('Starting product generation...').removeClass().addClass('notice notice-info').show();
         $('.product-progress-bar').css('width', '0%');
         
+        // Store selected product types for use in processProductBatch
+        window.selectedProductTypes = productTypes;
         processProductBatch();
     });
 

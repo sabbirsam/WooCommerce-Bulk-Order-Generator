@@ -2,9 +2,9 @@
 Contributors: devsabbirahmed
 Tags: order export, woocommerce, generator, product, order
 Requires at least: 5.9
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 5.6
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -93,6 +93,19 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 5. About page
 
 == Changelog ==
+
+### 1.4.0 – 20 June 2025
+#### ✨ New
+- **Product Type Selection**  
+  - Users can now select which product types to generate.
+- **SDK Integration**  
+  - SDK added for extended functionality and easier integration.
+#### 🐞 Fix
+- **Product Export**  
+  - Improved export functionality based on selected product types.
+- **Product Import**  
+  - Correctly imports products along with their product types.
+
 
 **Version 1.3.0** 
 🚀 New Features

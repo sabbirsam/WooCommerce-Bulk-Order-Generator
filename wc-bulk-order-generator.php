@@ -9,7 +9,7 @@
  * 
  * Plugin URI: https://github.com/sabbirsam/WooCommerce-Bulk-Order-Generator
  * Description: Generates bulk random orders for WooCommerce testing with optimized batch processing
- * Version: 1.3.0
+ * Version: 1.4.0
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Author: sabbirsam
@@ -20,11 +20,48 @@
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  */
 
+ if ( ! function_exists( 'wbog_fs' ) ) {
+    // Create a helper function for easy SDK access.
+    function wbog_fs() {
+        global $wbog_fs;
+
+        if ( ! isset( $wbog_fs ) ) {
+            // Include Freemius SDK.
+            require_once dirname( __FILE__ ) . '/freemius/start.php';
+            $wbog_fs = fs_dynamic_init( array(
+                'id'                  => '19520',
+                'slug'                => 'wc-bulk-order-generator',
+                'type'                => 'plugin',
+                'public_key'          => 'pk_acd2a7190335b57a18f1d9080077d',
+                'is_premium'          => false,
+				'has_premium_version' => true,
+				'has_addons'          => false,
+				'has_paid_plans'      => false,
+				'is_org_compliant'    => true,
+                'menu'                => array(
+                    'slug'           => 'wc-order-generator',
+                    'override_exact' => true,
+                    'parent'         => array(
+                        'slug' => 'wc-order-generator',
+                    ),
+                ),
+            ) );
+        }
+
+        return $wbog_fs;
+    }
+
+    // Init Freemius.
+    wbog_fs();
+    // Signal that SDK was initiated.
+    do_action( 'wbog_fs_loaded' );
+}
+
  defined('ABSPATH') || die('Hey, what are you doing here? You silly human!');
 
 
 // Define plugin constants.
-define('WC_BULK_GENERATOR_VERSION', '1.3.0');
+define('WC_BULK_GENERATOR_VERSION', '1.4.0');
 define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -377,7 +414,35 @@ class WC_Bulk_Order_Generator {
                                     <?php esc_html_e('Total number of product you want to create', 'wc-bulk-order-generator'); ?>
                                 </p>
                             </div>
-    
+
+                            <!-- Product Type Selection -->
+                            <div class="setting-card">
+                                <label><?php esc_html_e('Product Types', 'wc-bulk-order-generator'); ?></label>
+                                <div class="product-type-options">
+                                    <label class="product-type-checkbox">
+                                        <input type="checkbox" name="product_types[]" value="simple" checked>
+                                        <?php esc_html_e('Simple', 'wc-bulk-order-generator'); ?>
+                                        <span class="checkmark"></span>
+                                    </label>
+                                    <label class="product-type-checkbox">
+                                        <input type="checkbox" name="product_types[]" value="variable">
+                                        <?php esc_html_e('Variable', 'wc-bulk-order-generator'); ?>
+                                        <span class="checkmark"></span>
+                                    </label>
+                                    <label class="product-type-checkbox">
+                                        <input type="checkbox" name="product_types[]" value="grouped">
+                                        <?php esc_html_e('Grouped', 'wc-bulk-order-generator'); ?>
+                                        <span class="checkmark"></span>
+                                    </label>
+                                    <label class="product-type-checkbox">
+                                        <input type="checkbox" name="product_types[]" value="external">
+                                        <?php esc_html_e('Affiliate/External', 'wc-bulk-order-generator'); ?>
+                                        <span class="checkmark"></span>
+                                    </label>
+                                </div>
+                                <p class="description"><?php esc_html_e('Select which types of products to generate. If more than one is selected, types will be chosen randomly for each product.', 'wc-bulk-order-generator'); ?></p>
+                            </div>
+
                             <div class="setting-card">
                                 <label for="product_batch_size"><?php esc_html_e('Batch Size', 'wc-bulk-order-generator'); ?></label>
                                 <input type="number" id="product_batch_size" name="product_batch_size" 
@@ -389,7 +454,7 @@ class WC_Bulk_Order_Generator {
                                 </p>
                                 <div class="poc-note">
                                     <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
-                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                    <?php esc_html_e('Adjust the batch size based on your system\'s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
                                 </div>
                             </div>
                         </div>
@@ -446,7 +511,7 @@ class WC_Bulk_Order_Generator {
                                 </p>
                                 <div class="poc-note">
                                     <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
-                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                    <?php esc_html_e('Adjust the batch size based on your system\'s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
                                 </div>
                             </div>
                         </div>
@@ -510,7 +575,7 @@ class WC_Bulk_Order_Generator {
                                 <p class="description"><?php esc_html_e('Number of orders to export per batch (5-30).', 'wc-bulk-order-generator'); ?></p>
                                 <div class="poc-note">
                                     <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
-                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                    <?php esc_html_e('Adjust the batch size based on your system\'s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
                                 </div>
                             </div>
 
@@ -584,7 +649,7 @@ class WC_Bulk_Order_Generator {
                                 <p class="description"><?php esc_html_e('Number of products to export per batch (5-30)', 'wc-bulk-order-generator'); ?></p>
                                 <div class="poc-note">
                                     <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
-                                    <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                    <?php esc_html_e('Adjust the batch size based on your system\'s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
                                 </div>
                             </div>
 
@@ -710,7 +775,7 @@ class WC_Bulk_Order_Generator {
                                         <p class="description"><?php esc_html_e('Number of orders to process per batch (5-30)', 'wc-bulk-order-importer'); ?></p>
                                         <div class="poc-note">
                                             <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
-                                            <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                            <?php esc_html_e('Adjust the batch size based on your system\'s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
                                         </div>
                                     </td>
                                 </tr>
@@ -801,7 +866,7 @@ class WC_Bulk_Order_Generator {
                                         
                                         <div class="poc-note">
                                             <p><strong><?php esc_html_e('Note:', 'wc-bulk-order-generator'); ?></strong> 
-                                            <?php esc_html_e('Adjust the batch size based on your system’s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
+                                            <?php esc_html_e('Adjust the batch size based on your system\'s capacity. Higher values may require more memory.', 'wc-bulk-order-generator'); ?></p>
                                         </div>
 
                                     </td>
@@ -948,8 +1013,8 @@ class WC_Bulk_Order_Generator {
                         $plugins = [
                             [
                                 'icon' => 'forms',
-                                'name' => 'FormDeck',
-                                'description' => 'Simple Form Builder with WhatsApp Floating Forms',
+                                'name' => 'Simple Form',
+                                'description' => 'Quick FormDeck for Contact Forms, Multi Step Columns based Forms',
                                 'tags' => ['Free', 'WhatsApp Integration'],
                                 'url' => 'https://wordpress.org/plugins/simple-form/'
                             ],
@@ -962,8 +1027,8 @@ class WC_Bulk_Order_Generator {
                             ],
                             [
                                 'icon' => 'warning',
-                                'name' => 'EasyError',
-                                'description' => 'Easy Error Log for WordPress',
+                                'name' => 'Easy Error Log',
+                                'description' => 'Essential Debugging Tool for WordPress',
                                 'tags' => ['Free', 'Error Tracking'],
                                 'url' => 'https://wordpress.org/plugins/easy-error-log/'
                             ]

@@ -63,14 +63,28 @@ class WC_Bulk_Product_Import {
                     }
                 }
                 
+                // Determine product type
+                $product_type = isset($product_data['type']) ? strtolower(sanitize_text_field($product_data['type'])) : 'simple';
+                
                 // Skip if product already exists and we're not updating
+                $is_real_duplicate = false;
                 if ($existing_product) {
+                    $post = get_post($existing_product->get_id());
+                    if ($post && $post->post_type === 'product' && !in_array($post->post_status, ['trash', 'auto-draft', 'draft'])) {
+                        $is_real_duplicate = true;
+                    }
+                }
+                if (
+                    $is_real_duplicate &&
+                    !in_array($product_type, ['variable', 'grouped', 'external', 'affiliate']) &&
+                    (!$existing_product->get_parent_id() || $existing_product->get_parent_id() == 0)
+                ) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Product skipped (duplicate SKU or ID): ' . $sku . ' (type: ' . $product_type . ') Existing product ID: ' . ($existing_product ? $existing_product->get_id() : 'none'));
+                    }
                     $skipped++;
                     continue;
                 }
-                
-                // Determine product type
-                $product_type = isset($product_data['type']) ? strtolower(sanitize_text_field($product_data['type'])) : 'simple';
                 
                 // Create new product based on type
                 switch ($product_type) {
@@ -81,6 +95,7 @@ class WC_Bulk_Product_Import {
                         $product = new WC_Product_Grouped();
                         break;
                     case 'external':
+                    case 'affiliate':
                         $product = new WC_Product_External();
                         break;
                     default:
@@ -96,12 +111,48 @@ class WC_Bulk_Product_Import {
                     $product->set_sku(sanitize_text_field($product_data['sku']));
                 }
                 
-                if (isset($product_data['regular price'])) {
-                    $product->set_regular_price(wc_format_decimal($product_data['regular price']));
-                }
-                
-                if (isset($product_data['sale price']) && !empty($product_data['sale price'])) {
-                    $product->set_sale_price(wc_format_decimal($product_data['sale price']));
+                if ($product_type === 'external' || $product_type === 'affiliate') {
+                    // Set external URL and button text from CSV columns if present
+                    if (!empty($product_data['external url'])) {
+                        $product->set_product_url(esc_url_raw($product_data['external url']));
+                    } else if (!empty($product_data['meta fields']) && strpos($product_data['meta fields'], '_product_url::') !== false) {
+                        if (preg_match('/_product_url::([^|]*)/', $product_data['meta fields'], $matches)) {
+                            $product->set_product_url(esc_url_raw($matches[1]));
+                        }
+                    }
+                    if (!empty($product_data['button text'])) {
+                        $product->set_button_text(sanitize_text_field($product_data['button text']));
+                    } else if (!empty($product_data['meta fields']) && strpos($product_data['meta fields'], '_button_text::') !== false) {
+                        if (preg_match('/_button_text::([^|]*)/', $product_data['meta fields'], $matches)) {
+                            $product->set_button_text(sanitize_text_field($matches[1]));
+                        }
+                    }
+                    $product->set_regular_price('0');
+                } else {
+                    // Try to get regular price from main column or meta fields
+                    $regularPrice = '';
+                    if (isset($product_data['regular price']) && $product_data['regular price'] !== '') {
+                        $regularPrice = wc_format_decimal($product_data['regular price']);
+                    } else if (isset($product_data['meta fields']) && strpos($product_data['meta fields'], '_regular_price::') !== false) {
+                        if (preg_match('/_regular_price::([^|]*)/', $product_data['meta fields'], $matches)) {
+                            $regularPrice = wc_format_decimal($matches[1]);
+                        }
+                    }
+                    if ($regularPrice !== '') {
+                        $product->set_regular_price($regularPrice);
+                    }
+                    // Try to get sale price from main column or meta fields
+                    $salePrice = '';
+                    if (isset($product_data['sale price']) && $product_data['sale price'] !== '') {
+                        $salePrice = wc_format_decimal($product_data['sale price']);
+                    } else if (isset($product_data['meta fields']) && strpos($product_data['meta fields'], '_sale_price::') !== false) {
+                        if (preg_match('/_sale_price::([^|]*)/', $product_data['meta fields'], $matches)) {
+                            $salePrice = wc_format_decimal($matches[1]);
+                        }
+                    }
+                    if ($salePrice !== '') {
+                        $product->set_sale_price($salePrice);
+                    }
                 }
                 
                 if (isset($product_data['description'])) {
@@ -112,20 +163,20 @@ class WC_Bulk_Product_Import {
                     $product->set_short_description(wp_kses_post($product_data['short description']));
                 }
                 
-                // Stock management
-                if (isset($product_data['in stock'])) {
-                    $stock_status = wc_string_to_bool($product_data['in stock']) ? 'instock' : 'outofstock';
-                    $product->set_stock_status($stock_status);
-                }
-                
-                if (isset($product_data['stock'])) {
-                    $product->set_manage_stock(true);
-                    $product->set_stock_quantity(wc_stock_amount($product_data['stock']));
-                }
-                
-                if (isset($product_data['backorders allowed'])) {
-                    $backorders = wc_string_to_bool($product_data['backorders allowed']) ? 'yes' : 'no';
-                    $product->set_backorders($backorders);
+                // Stock management (skip for grouped/external)
+                if ($product_type !== 'grouped' && $product_type !== 'external' && $product_type !== 'affiliate') {
+                    if (isset($product_data['in stock'])) {
+                        $stock_status = wc_string_to_bool($product_data['in stock']) ? 'instock' : 'outofstock';
+                        $product->set_stock_status($stock_status);
+                    }
+                    if (isset($product_data['stock'])) {
+                        $product->set_manage_stock(true);
+                        $product->set_stock_quantity(wc_stock_amount($product_data['stock']));
+                    }
+                    if (isset($product_data['backorders allowed'])) {
+                        $backorders = wc_string_to_bool($product_data['backorders allowed']) ? 'yes' : 'no';
+                        $product->set_backorders($backorders);
+                    }
                 }
                 
                 // Dimensions
@@ -253,7 +304,47 @@ class WC_Bulk_Product_Import {
                 }
                 
                 // Save the product
-                $product->save();
+                $product_id = $product->save();
+                
+                // Handle variable product attributes and variations
+                if ($product_type === 'variable') {
+                    // Parse attributes from CSV columns or meta fields
+                    $attributes = [];
+                    if (!empty($product_data['attributes']) && !empty($product_data['attribute data'])) {
+                        $attr_names = explode('|', $product_data['attributes']);
+                        $attr_values = explode('|', $product_data['attribute data']);
+                        foreach ($attr_names as $i => $attr_name) {
+                            $taxonomy = sanitize_title($attr_name);
+                            $options = isset($attr_values[$i]) ? explode('|', $attr_values[$i]) : [];
+                            $attribute = new WC_Product_Attribute();
+                            $attribute->set_name($taxonomy);
+                            $attribute->set_options($options);
+                            $attribute->set_visible(true);
+                            $attribute->set_variation(true);
+                            $attributes[$taxonomy] = $attribute;
+                        }
+                        $product->set_attributes($attributes);
+                        $product->save();
+                    }
+                    // Parse variations from CSV (variation IDs or meta fields)
+                    if (!empty($product_data['variations'])) {
+                        $variation_ids = explode('|', $product_data['variations']);
+                        foreach ($variation_ids as $variation_id) {
+                            // Try to restore variation from meta if present
+                            // (In a real implementation, you'd want to store variation data in the CSV)
+                        }
+                    }
+                }
+                
+                // Handle grouped product children
+                if ($product_type === 'grouped' && !empty($product_data['grouped products'])) {
+                    $children_ids = array_filter(array_map('intval', explode('|', $product_data['grouped products'])));
+                    if (!empty($children_ids)) {
+                        $product->set_children($children_ids);
+                        $product->save();
+                    }
+                }
+                
                 $successful++;
                 
             } catch (Exception $e) {

@@ -94,7 +94,7 @@ class WC_Bulk_Order_Export {
         $orders = wc_get_orders($args);
     
         $upload_dir = wp_upload_dir();
-        $export_file = $upload_dir['basedir'] . '/wc-bulk-export-' . sanitize_file_name($export_session) . '.csv';
+        $export_file = $upload_dir['basedir'] . '/wc-bulk-order-export-' . sanitize_file_name($export_session) . '.csv';
     
         // Open/append to CSV file
         $file_mode = ($batch_number == 0) ? 'w' : 'a';
