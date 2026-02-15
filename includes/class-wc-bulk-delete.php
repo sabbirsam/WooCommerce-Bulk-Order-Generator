@@ -1,4 +1,11 @@
 <?php
+/**
+ * WC Bulk Product Generator
+ *
+ * @package WcBulkOrderGenerator
+ */
+
+namespace WcBulkOrderGenerator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -84,7 +91,7 @@ class WC_Bulk_Delete {
                     );
                     // error_log('Failed to delete order ID: ' . $order->get_id());
                 }
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $skipped++;
                 $errors[] = array(
                     'id' => $order->get_id(),
@@ -159,7 +166,7 @@ class WC_Bulk_Delete {
                         'error' => 'Failed to delete product'
                     );
                 }
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $skipped++;
                 $errors[] = array(
                     'id' => $product->get_id(),

@@ -1,4 +1,11 @@
 <?php
+/**
+ * WC Bulk Product Generator
+ *
+ * @package WcBulkOrderGenerator
+ */
+
+namespace WcBulkOrderGenerator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -99,7 +106,7 @@ class WC_Bulk_Order_Import {
     
                 // Set shipping method if provided
                 if (!empty($first_entry['shipping_method'])) {
-                    $shipping_item = new WC_Order_Item_Shipping();
+                    $shipping_item = new \WC_Order_Item_Shipping();
                     $shipping_item->set_method_title($first_entry['shipping_method']);
                     $order->add_item($shipping_item);
                 }
@@ -115,14 +122,14 @@ class WC_Bulk_Order_Import {
                     $product = wc_get_product($product_entry['product_id']);
                     if (!$product) {
                         // Create a new product if not found
-                        $product = new WC_Product();
+                        $product = new \WC_Product();
                         $product->set_name($product_entry['product_name']);
                         $product->set_price($product_entry['product_price']);
                         $product->save();
                     }
     
                     // Create order item
-                    $item = new WC_Order_Item_Product();
+                    $item = new \WC_Order_Item_Product();
                     $item->set_product($product);
                     $item->set_quantity($product_entry['quantity']);
                     $item->set_total($product_entry['product_price'] * $product_entry['quantity']);
@@ -138,7 +145,7 @@ class WC_Bulk_Order_Import {
                 update_post_meta($order->get_id(), '_imported_order_id', $order_id);
     
                 $successful++;
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 error_log('Order import error: ' . $e->getMessage());
                 $failed++;
             }
@@ -155,18 +162,25 @@ class WC_Bulk_Order_Import {
         check_ajax_referer('import_orders_nonce', 'nonce');
     
         // Process uploaded CSV
-        if (!isset($_FILES['csv_file'])) {
+        if (!isset($_FILES['csv_file']) || !isset($_FILES['csv_file']['tmp_name'])) {
             wp_send_json_error('No file uploaded');
         }
     
-        $file = $_FILES['csv_file']['tmp_name'];
+        // Sanitize and validate the uploaded file
+        $file_tmp_name = sanitize_text_field(wp_unslash($_FILES['csv_file']['tmp_name']));
+        
+        // Verify it's a valid uploaded file
+        if (!is_uploaded_file($file_tmp_name)) {
+            wp_send_json_error('Invalid file upload');
+        }
+        
         $batch_size = intval($_POST['batch_size'] ?? 50);
         $current_batch = intval($_POST['current_batch'] ?? 0);
         // Get running totals from POST, default to 0
         $skipped_total = intval($_POST['skipped'] ?? 0);
         $successful_total = intval($_POST['successful'] ?? 0);
     
-        $orders = $this->parse_csv($file);
+        $orders = $this->parse_csv($file_tmp_name);
         $total_orders = count($orders);
     
         // Calculate the slice of orders for this batch

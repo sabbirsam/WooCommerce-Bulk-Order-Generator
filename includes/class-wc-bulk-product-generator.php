@@ -1,4 +1,11 @@
 <?php
+/**
+ * WC Bulk Product Generator
+ *
+ * @package WcBulkOrderGenerator
+ */
+
+namespace WcBulkOrderGenerator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -62,7 +69,8 @@ class WC_Bulk_Product_Generator {
         $batch_size = isset($_POST['batch_size']) ? absint($_POST['batch_size']) : 20;
         $price_min = isset($_POST['price_min']) ? floatval($_POST['price_min']) : 10;
         $price_max = isset($_POST['price_max']) ? floatval($_POST['price_max']) : 100;
-        $product_types = isset($_POST['product_types']) && is_array($_POST['product_types']) ? array_map('sanitize_text_field', $_POST['product_types']) : array('simple');
+        $product_types = isset($_POST['product_types']) && is_array($_POST['product_types']) ? array_map('sanitize_text_field', wp_unslash($_POST['product_types'])) : array('simple');
+        $use_random_images = isset($_POST['use_random_images']) ? absint($_POST['use_random_images']) : 0;
         
         if ($batch_size < 1 || $batch_size > 50) {
             $batch_size = 20;
@@ -84,10 +92,10 @@ class WC_Bulk_Product_Generator {
                     
                     // Verify product data
                     if (empty($product_data['title']) || empty($product_data['description'])) {
-                        throw new Exception('Invalid product data generated');
+                        throw new \Exception('Invalid product data generated');
                     }
                     
-                    $product = $this->create_product($product_data);
+                    $product = $this->create_product($product_data, $use_random_images);
                     
                     if ($product && !is_wp_error($product) && $product->get_id() > 0) {
                         $success_count++;
@@ -101,7 +109,7 @@ class WC_Bulk_Product_Generator {
                     // Free up memory
                     unset($product);
                     wp_cache_flush();
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     $failed_count++;
                     $errors[] = $e->getMessage();
                 }
@@ -117,7 +125,7 @@ class WC_Bulk_Product_Generator {
                 'errors' => $errors
             ));
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             wp_send_json_error(array(
                 'message' => $e->getMessage(),
                 'errors' => $errors
@@ -176,23 +184,23 @@ class WC_Bulk_Product_Generator {
         );
     }
 
-    private function create_product($data) {
+    private function create_product($data, $use_random_images = 0) {
         try {
             $type = isset($data['type']) ? $data['type'] : 'simple';
             switch ($type) {
                 case 'variable':
-                    $product = new WC_Product_Variable();
+                    $product = new \WC_Product_Variable();
                     break;
                 case 'grouped':
-                    $product = new WC_Product_Grouped();
+                    $product = new \WC_Product_Grouped();
                     break;
                 case 'external':
                 case 'affiliate':
-                    $product = new WC_Product_External();
+                    $product = new \WC_Product_External();
                     break;
                 case 'simple':
                 default:
-                    $product = new WC_Product_Simple();
+                    $product = new \WC_Product_Simple();
                     break;
             }
             // Basic product data
@@ -235,15 +243,20 @@ class WC_Bulk_Product_Generator {
             // Save product to get ID
             $product_id = $product->save();
             if (!$product_id) {
-                throw new Exception('Failed to save product');
+                throw new \Exception('Failed to save product');
             }
             // Add categories
             $category_ids = $this->get_random_categories();
             if (!empty($category_ids)) {
                 wp_set_object_terms($product_id, $category_ids, 'product_cat');
             }
-            // Add placeholder image
-            $this->maybe_add_placeholder_image($product_id);
+            // Add images based on checkbox
+            if ($use_random_images) {
+                $this->add_random_images($product_id);
+            } else {
+                // Add placeholder image
+                $this->maybe_add_placeholder_image($product_id);
+            }
             // Add attributes/variations for variable products
             if ($type === 'variable') {
                 $this->add_random_attributes_and_variations($product, $product_id);
@@ -253,8 +266,8 @@ class WC_Bulk_Product_Generator {
                 $this->assign_random_grouped_children($product, $product_id);
             }
             return wc_get_product($product_id); // Return the updated product object
-        } catch (Exception $e) {
-            return new WP_Error('product_creation_failed', $e->getMessage());
+        } catch (\Exception $e) {
+            return new \WP_Error('product_creation_failed', $e->getMessage());
         }
     }
 
@@ -282,6 +295,146 @@ class WC_Bulk_Product_Generator {
         if ($placeholder_id) {
             set_post_thumbnail($product_id, $placeholder_id);
         }
+    }
+
+    /**
+     * Add random images from the images folder to product
+     * 
+     * @param int $product_id The product ID
+     */
+    private function add_random_images($product_id) {
+        // Define the images folder path
+        $images_folder = WC_BULK_GENERATOR_PLUGIN_DIR . 'images/';
+        
+        // Check if images folder exists
+        if (!is_dir($images_folder)) {
+            // Fallback to placeholder if folder doesn't exist
+            $this->maybe_add_placeholder_image($product_id);
+            return;
+        }
+        
+        // Get all image files from the folder
+        $allowed_extensions = array('jpg', 'jpeg', 'png', 'gif', 'webp');
+        $image_files = array();
+        
+        if ($handle = opendir($images_folder)) {
+            while (false !== ($file = readdir($handle))) {
+                $file_extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                if (in_array($file_extension, $allowed_extensions)) {
+                    $image_files[] = $images_folder . $file;
+                }
+            }
+            closedir($handle);
+        }
+        
+        // If no images found, use placeholder
+        if (empty($image_files)) {
+            $this->maybe_add_placeholder_image($product_id);
+            return;
+        }
+        
+        // Randomly select 1-4 images
+        shuffle($image_files);
+        $num_images = wp_rand(1, min(4, count($image_files)));
+        $selected_images = array_slice($image_files, 0, $num_images);
+        
+        $attachment_ids = array();
+        
+        foreach ($selected_images as $index => $image_path) {
+            // Upload image to WordPress media library
+            $attachment_id = $this->upload_image_to_media_library($image_path, $product_id);
+            
+            if ($attachment_id) {
+                $attachment_ids[] = $attachment_id;
+                
+                // Set the first image as featured image
+                if ($index === 0) {
+                    set_post_thumbnail($product_id, $attachment_id);
+                }
+            }
+        }
+        
+        // Set gallery images (excluding the featured image)
+        if (count($attachment_ids) > 1) {
+            $product = wc_get_product($product_id);
+            if ($product) {
+                $gallery_ids = array_slice($attachment_ids, 1);
+                $product->set_gallery_image_ids($gallery_ids);
+                $product->save();
+            }
+        }
+    }
+
+    /**
+     * Upload an image to WordPress media library
+     * 
+     * @param string $image_path Full path to the image file
+     * @param int $product_id The product ID to attach the image to
+     * @return int|false Attachment ID on success, false on failure
+     */
+    private function upload_image_to_media_library($image_path, $product_id) {
+        // Check if file exists
+        if (!file_exists($image_path)) {
+            return false;
+        }
+        
+        // Get the file name
+        $filename = basename($image_path);
+        
+        // Check if this image already exists in media library
+        $existing_attachment = get_posts(array(
+            'post_type' => 'attachment',
+            'meta_query' => array(
+                array(
+                    'key' => '_wp_attached_file',
+                    'value' => $filename,
+                    'compare' => 'LIKE'
+                )
+            ),
+            'posts_per_page' => 1,
+            'fields' => 'ids'
+        ));
+        
+        // If image already exists, reuse it
+        if (!empty($existing_attachment)) {
+            return $existing_attachment[0];
+        }
+        
+        // Include required WordPress files
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+        
+        // Upload the file
+        $upload = wp_upload_bits($filename, null, file_get_contents($image_path));
+        
+        if ($upload['error']) {
+            return false;
+        }
+        
+        // Prepare attachment data
+        $file_path = $upload['file'];
+        $file_type = wp_check_filetype($filename, null);
+        
+        $attachment = array(
+            'post_mime_type' => $file_type['type'],
+            'post_title' => sanitize_file_name(pathinfo($filename, PATHINFO_FILENAME)),
+            'post_content' => '',
+            'post_status' => 'inherit'
+        );
+        
+        // Insert the attachment
+        $attachment_id = wp_insert_attachment($attachment, $file_path, $product_id);
+        
+        if (is_wp_error($attachment_id)) {
+            return false;
+        }
+        
+        // Generate attachment metadata
+        $attachment_data = wp_generate_attachment_metadata($attachment_id, $file_path);
+        wp_update_attachment_metadata($attachment_id, $attachment_data);
+        
+        return $attachment_id;
     }
 
     // Helper: Add random attributes and variations to a variable product
@@ -333,7 +486,7 @@ class WC_Bulk_Product_Generator {
         }
         // Set attributes
         $product->set_attributes(array_map(function($attr) {
-            $attribute = new WC_Product_Attribute();
+            $attribute = new \WC_Product_Attribute();
             $attribute->set_name($attr['name']);
             $attribute->set_options(explode(' | ', $attr['value']));
             $attribute->set_visible($attr['is_visible']);
@@ -348,7 +501,7 @@ class WC_Bulk_Product_Generator {
         }
         $combinations = $this->cartesian_product($attr_values);
         foreach ($combinations as $combo) {
-            $variation = new WC_Product_Variation();
+            $variation = new \WC_Product_Variation();
             $variation->set_parent_id($product_id);
             $variation_attributes = array();
             $i = 0;
@@ -414,4 +567,4 @@ class WC_Bulk_Product_Generator {
 }
 
 // Initialize the product generator
-new WC_Bulk_Product_Generator();
+new \WcBulkOrderGenerator\WC_Bulk_Product_Generator();

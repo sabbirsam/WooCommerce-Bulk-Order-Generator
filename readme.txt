@@ -1,10 +1,10 @@
-=== WC Bulk Order Generator ===
+=== Bulk Order & Product Generator, Import Export for WooCommerce ===
 Contributors: devsabbirahmed
-Tags: order export, woocommerce, generator, product, order
+Tags: order export, woocommerce, generator, bulk order generator, bulk product generator
 Requires at least: 5.9
-Tested up to: 6.8
+Tested up to: 6.9
 Requires PHP: 5.6
-Stable tag: 1.4.0
+Stable tag: 1.4.3
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -12,7 +12,7 @@ Generate unlimited test orders and products for WooCommerce with realistic data.
 
 == Description ==
 
-WC Bulk Order Generator helps developers and store owners create realistic WooCommerce test data quickly. Generate thousands of WooCommerce products and orders with just a few clicks.
+Bulk Order & Product Generator, Import Export for WooCommerce helps developers and store owners create realistic WooCommerce test data quickly. Generate thousands of WooCommerce products and orders with just a few clicks.
 
 ## 🚀 Key Features
 
@@ -93,6 +93,16 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 5. About page
 
 == Changelog ==
+
+### 1.4.3 – 15 Feb 2025
+- **Enhancement:** SDK and Product image generator
+
+### 1.4.2 – 11 Feb 2025
+- ** 🛠 Maintenance Release**
+    - Minor improvements, optimizations, and bug fixes.
+
+### 1.4.1 – 06 Dec 2025
+- **Enhancement:** WP 6.9 compatibility
 
 ### 1.4.0 – 20 June 2025
 #### ✨ New

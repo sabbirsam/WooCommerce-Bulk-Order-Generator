@@ -350,7 +350,12 @@ jQuery(document).ready(function($) {
 
     function processProductBatch() {
         if (!isGeneratingProducts) {
-            $('#product-generation-status').text('Generation stopped').removeClass().addClass('notice notice-warning').show();
+            const statusMsg = 'Generation stopped';
+            $('#product-generation-status').text(statusMsg).removeClass().addClass('notice notice-warning').show();
+            // Auto-hide after 3 seconds
+            setTimeout(function() {
+                $('#product-generation-status').fadeOut();
+            }, 3000);
             $('#start-product-generation').prop('disabled', false);
             $('#stop-product-generation').prop('disabled', true);
             $('#reset-product-generation').show();
@@ -362,7 +367,12 @@ jQuery(document).ready(function($) {
 
         const remainingProducts = totalProducts - (productSuccessCount + productFailedCount);
         if (remainingProducts <= 0) {
-            $('#product-generation-status').text('Product generation complete!').removeClass().addClass('notice notice-success').show();
+            const statusMsg = 'Product generation complete!';
+            $('#product-generation-status').text(statusMsg).removeClass().addClass('notice notice-success').show();
+            // Auto-hide after 5 seconds
+            setTimeout(function() {
+                $('#product-generation-status').fadeOut();
+            }, 5000);
             $('#start-product-generation').prop('disabled', false);
             $('#stop-product-generation').prop('disabled', true);
             $('#reset-product-generation').show();
@@ -383,7 +393,8 @@ jQuery(document).ready(function($) {
                 price_min: $('#price_min').val(),
                 price_max: $('#price_max').val(),
                 batch_number: currentProductBatch,
-                product_types: window.selectedProductTypes
+                product_types: window.selectedProductTypes,
+                use_random_images: $('#use_random_images').is(':checked') ? 1 : 0
             },
             
             success: function(response) {

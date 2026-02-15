@@ -1,4 +1,11 @@
 <?php
+/**
+ * WC Bulk Product Generator
+ *
+ * @package WcBulkOrderGenerator
+ */
+
+namespace WcBulkOrderGenerator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -89,17 +96,17 @@ class WC_Bulk_Product_Import {
                 // Create new product based on type
                 switch ($product_type) {
                     case 'variable':
-                        $product = new WC_Product_Variable();
+                        $product = new \WC_Product_Variable();
                         break;
                     case 'grouped':
-                        $product = new WC_Product_Grouped();
+                        $product = new \WC_Product_Grouped();
                         break;
                     case 'external':
                     case 'affiliate':
-                        $product = new WC_Product_External();
+                        $product = new \WC_Product_External();
                         break;
                     default:
-                        $product = new WC_Product_Simple();
+                        $product = new \WC_Product_Simple();
                 }
                 
                 // Set basic product data
@@ -316,7 +323,7 @@ class WC_Bulk_Product_Import {
                         foreach ($attr_names as $i => $attr_name) {
                             $taxonomy = sanitize_title($attr_name);
                             $options = isset($attr_values[$i]) ? explode('|', $attr_values[$i]) : [];
-                            $attribute = new WC_Product_Attribute();
+                            $attribute = new \WC_Product_Attribute();
                             $attribute->set_name($taxonomy);
                             $attribute->set_options($options);
                             $attribute->set_visible(true);
@@ -347,7 +354,7 @@ class WC_Bulk_Product_Import {
                 
                 $successful++;
                 
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 error_log('Product import error: ' . $e->getMessage());
                 $failed++;
             }

@@ -1,4 +1,11 @@
 <?php
+/**
+ * WC Bulk Product Generator
+ *
+ * @package WcBulkOrderGenerator
+ */
+
+namespace WcBulkOrderGenerator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -20,9 +27,9 @@ class WC_Bulk_Product_Export {
             return;
         }
     
-        $product_types = !empty($_POST['product_types']) ? array_map('sanitize_text_field', $_POST['product_types']) : [];
-        $categories = !empty($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : [];
-        $tags = !empty($_POST['tags']) ? array_map('sanitize_text_field', $_POST['tags']) : [];
+        $product_types = !empty($_POST['product_types']) ? array_map('sanitize_text_field', wp_unslash($_POST['product_types'])) : [];
+        $categories = !empty($_POST['categories']) ? array_map('sanitize_text_field', wp_unslash($_POST['categories'])) : [];
+        $tags = !empty($_POST['tags']) ? array_map('sanitize_text_field', wp_unslash($_POST['tags'])) : [];
 
         $args = [
             'post_type' => 'product',
@@ -86,7 +93,7 @@ class WC_Bulk_Product_Export {
             }
         }
         
-        $query = new WP_Query($args);
+        $query = new \WP_Query($args);
         $total_products = $query->found_posts;
     
         // Generate a unique session ID
@@ -111,10 +118,10 @@ class WC_Bulk_Product_Export {
         $batch_size = intval($_POST['batch_size']);
         $batch_number = intval($_POST['batch_number']);
         $total_batches = intval($_POST['total_batches']);
-        $export_session = sanitize_text_field($_POST['export_session']);
-        $product_types = !empty($_POST['product_types']) ? array_map('sanitize_text_field', $_POST['product_types']) : [];
-        $categories = !empty($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : [];
-        $tags = !empty($_POST['tags']) ? array_map('sanitize_text_field', $_POST['tags']) : [];
+        $export_session = sanitize_text_field(wp_unslash($_POST['export_session']));
+        $product_types = !empty($_POST['product_types']) ? array_map('sanitize_text_field', wp_unslash($_POST['product_types'])) : [];
+        $categories = !empty($_POST['categories']) ? array_map('sanitize_text_field', wp_unslash($_POST['categories'])) : [];
+        $tags = !empty($_POST['tags']) ? array_map('sanitize_text_field', wp_unslash($_POST['tags'])) : [];
     
         $args = [
             'post_type' => 'product',
@@ -179,7 +186,7 @@ class WC_Bulk_Product_Export {
             }
         }
     
-        $query = new WP_Query($args);
+        $query = new \WP_Query($args);
         $products = $query->posts;
     
         $upload_dir = wp_upload_dir();
@@ -403,7 +410,7 @@ class WC_Bulk_Product_Export {
                 ]);
                 
                 $success_count++;
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $failed_count++;
             }
         }

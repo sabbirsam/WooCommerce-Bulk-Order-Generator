@@ -1,0 +1,37 @@
+{
+    "name": "sam/wc-bulk-order-generator",
+    "description": "Generate, import, export, and delete WooCommerce orders and products in bulk with optimized batch processing for fast, reliable store management and testing",
+    "autoload": {
+        "psr-4": {
+            "WcBulkOrderGenerator\\": "includes/"
+        }
+    },
+    "authors": [
+        {
+            "name": "devsabbirahmed"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "coenjacobs/mozart": "^0.7"
+    },
+    "extra": {
+        "mozart": {
+            "dep_namespace": "WcBulkOrderGenerator\\Dependencies\\",
+            "dep_directory": "/vendor/",
+            "classmap_directory": "/classes/dependencies/",
+            "classmap_prefix": "WBOG_",
+            "packages": [
+                "freemius/wordpress-sdk"
+            ]
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "\"vendor/bin/mozart\" compose"
+        ],
+        "post-update-cmd": [
+            "\"vendor/bin/mozart\" compose"
+        ]
+    }
+}

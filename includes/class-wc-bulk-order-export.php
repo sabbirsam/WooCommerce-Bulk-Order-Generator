@@ -1,4 +1,11 @@
 <?php
+/**
+ * WC Bulk Order Export
+ *
+ * @package WcBulkOrderGenerator
+ */
+
+namespace WcBulkOrderGenerator;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -20,10 +27,12 @@ class WC_Bulk_Order_Export {
             return;
         }
     
-        $export_all = isset($_POST['export_all']) ? filter_var($_POST['export_all'], FILTER_VALIDATE_BOOLEAN) : false;
-        $date_from = $export_all ? null : sanitize_text_field($_POST['date_from']);
-        $date_to = $export_all ? null : sanitize_text_field($_POST['date_to']);
-        $statuses = isset($_POST['statuses']) ? array_map('sanitize_text_field', $_POST['statuses']) : [];
+        $export_all = isset($_POST['export_all']) ? filter_var(wp_unslash($_POST['export_all']), FILTER_VALIDATE_BOOLEAN) : false;
+        $date_from = $export_all ? null : sanitize_text_field(wp_unslash($_POST['date_from']));
+        $date_to = $export_all ? null : sanitize_text_field(wp_unslash($_POST['date_to']));
+        $statuses = isset($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : [];
+
+        
     
         $args = [
             'type' => 'shop_order',
@@ -66,11 +75,11 @@ class WC_Bulk_Order_Export {
         $batch_size = intval($_POST['batch_size']);
         $batch_number = intval($_POST['batch_number']);
         $total_batches = intval($_POST['total_batches']);
-        $export_session = sanitize_text_field($_POST['export_session']);
-        $export_all = isset($_POST['export_all']) ? filter_var($_POST['export_all'], FILTER_VALIDATE_BOOLEAN) : false;
-        $date_from = $export_all ? null : sanitize_text_field($_POST['date_from']);
-        $date_to = $export_all ? null : sanitize_text_field($_POST['date_to']);
-        $statuses = isset($_POST['statuses']) ? array_map('sanitize_text_field', $_POST['statuses']) : [];
+        $export_session = sanitize_text_field(wp_unslash($_POST['export_session']));
+        $export_all = isset($_POST['export_all']) ? filter_var(wp_unslash($_POST['export_all']), FILTER_VALIDATE_BOOLEAN) : false;
+        $date_from = $export_all ? null : sanitize_text_field(wp_unslash($_POST['date_from']));
+        $date_to = $export_all ? null : sanitize_text_field(wp_unslash($_POST['date_to']));
+        $statuses = isset($_POST['statuses']) ? array_map('sanitize_text_field', wp_unslash($_POST['statuses'])) : [];
     
         $args = [
             'type' => 'shop_order',
@@ -174,7 +183,7 @@ class WC_Bulk_Order_Export {
                 }
     
                 $success_count++;
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $failed_count++;
             }
         }
@@ -202,5 +211,5 @@ class WC_Bulk_Order_Export {
     }
 }
 
-// Initialize the product generator
-new WC_Bulk_Order_Export();
+// Initialize the order export
+new \WcBulkOrderGenerator\WC_Bulk_Order_Export();
