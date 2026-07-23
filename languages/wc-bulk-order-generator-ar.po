@@ -1,0 +1,414 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: 2026-03-05 12:21+0600\n"
+"PO-Revision-Date: 2026-03-05 12:21+0600\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.8\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: __;_e;esc_html__;esc_html_e;esc_html\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: assets\n"
+"X-Poedit-SearchPathExcluded-1: vendor\n"
+"X-Poedit-SearchPathExcluded-2: node_modules\n"
+"X-Poedit-SearchPathExcluded-3: react/node_modules\n"
+"X-Poedit-SearchPathExcluded-4: lib\n"
+"X-Poedit-SearchPathExcluded-5: .wordpress-org\n"
+"X-Poedit-SearchPathExcluded-6: .vscode\n"
+"X-Poedit-SearchPathExcluded-7: .github\n"
+"X-Poedit-SearchPathExcluded-8: .git\n"
+
+#: wc-bulk-order-generator.php:155
+#, php-format
+msgid "Bulk Order Generator: Required file \"%s\" is missing."
+msgstr "مولد الطلبات بالجملة: الملف المطلوب \"%s\" مفقود."
+
+#: wc-bulk-order-generator.php:185
+msgid "Generator"
+msgstr "المولّد"
+
+#: wc-bulk-order-generator.php:274
+#, php-format
+msgid "WooCommerce is not installed or active. %1$s may not work correctly."
+msgstr "إضافة WooCommerce غير مثبتة أو غير مفعّلة. قد لا يعمل %1$s بشكل صحيح."
+
+#: wc-bulk-order-generator.php:275
+msgid "Bulk Order & Product Generator, Import Export for WooCommerce"
+msgstr "مولد الطلبات والمنتجات بالجملة، الاستيراد والتصدير لـ WooCommerce"
+
+#: wc-bulk-order-generator.php:279
+msgid "Install WooCommerce"
+msgstr "تثبيت WooCommerce"
+
+#: wc-bulk-order-generator.php:360 wc-bulk-order-generator.php:361
+#: wc-bulk-order-generator.php:371 wc-bulk-order-generator.php:372
+msgid "Bulk Generator"
+msgstr "مولد بالجملة"
+
+#: wc-bulk-order-generator.php:421
+msgid "WC Bulk Generator"
+msgstr "مولد WooCommerce بالجملة"
+
+#: wc-bulk-order-generator.php:422
+msgid "Generate test orders and products in batches with monitoring data."
+msgstr "إنشاء طلبات ومنتجات اختبارية على دفعات مع بيانات المراقبة."
+
+#: wc-bulk-order-generator.php:427
+msgid "Products"
+msgstr "المنتجات"
+
+#: wc-bulk-order-generator.php:428
+msgid "Orders"
+msgstr "الطلبات"
+
+#: wc-bulk-order-generator.php:429
+msgid "Export"
+msgstr "تصدير"
+
+#: wc-bulk-order-generator.php:430
+msgid "Import"
+msgstr "استيراد"
+
+#: wc-bulk-order-generator.php:431
+msgid "Actions"
+msgstr "الإجراءات"
+
+#: wc-bulk-order-generator.php:440
+msgid "Number of Products"
+msgstr "عدد المنتجات"
+
+#: wc-bulk-order-generator.php:446
+msgid "Total number of product you want to create"
+msgstr "إجمالي عدد المنتجات التي تريد إنشاؤها"
+
+#: wc-bulk-order-generator.php:452
+msgid "Product Types"
+msgstr "أنواع المنتجات"
+
+#: wc-bulk-order-generator.php:456
+msgid "Simple"
+msgstr "بسيط"
+
+#: wc-bulk-order-generator.php:461
+msgid "Variable"
+msgstr "متغير"
+
+#: wc-bulk-order-generator.php:466
+msgid "Grouped"
+msgstr "مجمع"
+
+#: wc-bulk-order-generator.php:471
+msgid "Affiliate/External"
+msgstr "تسويق بالعمولة / خارجي"
+
+#: wc-bulk-order-generator.php:475
+msgid ""
+"Select which types of products to generate. If more than one is selected, "
+"types will be chosen randomly for each product."
+msgstr ""
+"حدد أنواع المنتجات التي تريد إنشاؤها. إذا تم اختيار أكثر من نوع، سيتم اختيار "
+"النوع عشوائيًا لكل منتج."
+
+#: wc-bulk-order-generator.php:479 wc-bulk-order-generator.php:551
+#: wc-bulk-order-generator.php:619 wc-bulk-order-generator.php:693
+#: wc-bulk-order-generator.php:817 wc-bulk-order-generator.php:907
+msgid "Batch Size"
+msgstr "حجم الدفعة"
+
+#: wc-bulk-order-generator.php:485
+msgid "Set the amount to generate product at a time in each batch (5-30)"
+msgstr "حدد عدد المنتجات التي سيتم إنشاؤها في كل دفعة (5-30)"
+
+#: wc-bulk-order-generator.php:488 wc-bulk-order-generator.php:560
+#: wc-bulk-order-generator.php:624 wc-bulk-order-generator.php:698
+#: wc-bulk-order-generator.php:824 wc-bulk-order-generator.php:915
+#: wc-bulk-order-generator.php:972
+msgid "Note:"
+msgstr "ملاحظة:"
+
+#: wc-bulk-order-generator.php:489 wc-bulk-order-generator.php:561
+#: wc-bulk-order-generator.php:625 wc-bulk-order-generator.php:699
+#: wc-bulk-order-generator.php:825 wc-bulk-order-generator.php:916
+msgid ""
+"Adjust the batch size based on your system's capacity. Higher values may "
+"require more memory."
+msgstr ""
+"قم بضبط حجم الدفعة بناءً على قدرة نظامك. القيم الأعلى قد تتطلب ذاكرة أكبر."
+
+#: wc-bulk-order-generator.php:495
+msgid "Product Images"
+msgstr "صور المنتجات"
+
+#: wc-bulk-order-generator.php:499
+msgid "Generate Product Images"
+msgstr "إنشاء صور للمنتجات"
+
+#: wc-bulk-order-generator.php:504
+msgid "Enable to generate product images. This may increase processing time."
+msgstr ""
+"قم بتفعيل هذا الخيار لإنشاء صور للمنتجات. قد يؤدي ذلك إلى زيادة وقت المعالجة."
+
+#: wc-bulk-order-generator.php:515 wc-bulk-order-generator.php:519
+#: wc-bulk-order-generator.php:572 wc-bulk-order-generator.php:576
+#: wc-bulk-order-generator.php:580 wc-bulk-order-generator.php:584
+#: wc-bulk-order-generator.php:648 wc-bulk-order-generator.php:652
+#: wc-bulk-order-generator.php:656 wc-bulk-order-generator.php:747
+#: wc-bulk-order-generator.php:751 wc-bulk-order-generator.php:755
+#: wc-bulk-order-generator.php:837 wc-bulk-order-generator.php:841
+#: wc-bulk-order-generator.php:845 wc-bulk-order-generator.php:849
+#: wc-bulk-order-generator.php:929 wc-bulk-order-generator.php:933
+#: wc-bulk-order-generator.php:937 wc-bulk-order-generator.php:941
+#: wc-bulk-order-generator.php:995 wc-bulk-order-generator.php:999
+#: wc-bulk-order-generator.php:1030
+msgid "0"
+msgstr ""
+
+#: wc-bulk-order-generator.php:516
+msgid "Products Created"
+msgstr "المنتجات التي تم إنشاؤها"
+
+#: wc-bulk-order-generator.php:520 wc-bulk-order-generator.php:581
+#: wc-bulk-order-generator.php:657 wc-bulk-order-generator.php:756
+#: wc-bulk-order-generator.php:846 wc-bulk-order-generator.php:938
+msgid "Failed"
+msgstr "فشل"
+
+#: wc-bulk-order-generator.php:529 wc-bulk-order-generator.php:604
+msgid "Stop Generation"
+msgstr "إيقاف الإنشاء"
+
+#: wc-bulk-order-generator.php:530 wc-bulk-order-generator.php:605
+#: wc-bulk-order-generator.php:676 wc-bulk-order-generator.php:775
+#: wc-bulk-order-generator.php:862 wc-bulk-order-generator.php:954
+msgid "Reset"
+msgstr "إعادة تعيين"
+
+#: wc-bulk-order-generator.php:540
+msgid "Number of Orders"
+msgstr "عدد الطلبات"
+
+#: wc-bulk-order-generator.php:546
+msgid "Total number of order you want to create"
+msgstr "إجمالي عدد الطلبات التي تريد إنشاؤها"
+
+#: wc-bulk-order-generator.php:557
+msgid "Set the amount to generate order at a time in each batch (5-30)"
+msgstr "حدد عدد الطلبات التي سيتم إنشاؤها في كل دفعة (5-30)"
+
+#: wc-bulk-order-generator.php:573 wc-bulk-order-generator.php:649
+#: wc-bulk-order-generator.php:748 wc-bulk-order-generator.php:838
+#: wc-bulk-order-generator.php:930
+msgid "Total Processed"
+msgstr "إجمالي المعالج"
+
+#: wc-bulk-order-generator.php:577 wc-bulk-order-generator.php:653
+#: wc-bulk-order-generator.php:752 wc-bulk-order-generator.php:842
+#: wc-bulk-order-generator.php:934
+msgid "Successful"
+msgstr "ناجح"
+
+#: wc-bulk-order-generator.php:585
+msgid "Orders/Second"
+msgstr "طلبات/ثانية"
+
+#: wc-bulk-order-generator.php:591 wc-bulk-order-generator.php:663
+#: wc-bulk-order-generator.php:762 wc-bulk-order-generator.php:853
+#: wc-bulk-order-generator.php:945
+msgid "0s"
+msgstr ""
+
+#: wc-bulk-order-generator.php:592 wc-bulk-order-generator.php:664
+#: wc-bulk-order-generator.php:763 wc-bulk-order-generator.php:854
+#: wc-bulk-order-generator.php:946
+msgid "Elapsed Time"
+msgstr "الوقت المنقضي"
+
+#: wc-bulk-order-generator.php:595 wc-bulk-order-generator.php:667
+#: wc-bulk-order-generator.php:766
+msgid "--"
+msgstr ""
+
+#: wc-bulk-order-generator.php:596 wc-bulk-order-generator.php:668
+#: wc-bulk-order-generator.php:767
+msgid "Estimated Time Remaining"
+msgstr "الوقت المتبقي المقدر"
+
+#: wc-bulk-order-generator.php:616
+msgid "Order Export"
+msgstr "تصدير الطلبات"
+
+#: wc-bulk-order-generator.php:622
+msgid "Number of orders to export per batch (5-30)."
+msgstr "عدد الطلبات التي سيتم تصديرها في كل دفعة (5-30)."
+
+#: wc-bulk-order-generator.php:630
+msgid "Order Status"
+msgstr "حالة الطلب"
+
+#: wc-bulk-order-generator.php:631
+msgid ""
+"Select the order types you want to export. If none are selected, all data "
+"will be exported."
+msgstr ""
+"حدد أنواع الطلبات التي تريد تصديرها. إذا لم يتم تحديد أي خيار، سيتم تصدير "
+"جميع البيانات."
+
+#: wc-bulk-order-generator.php:690
+msgid "Product Export"
+msgstr "تصدير المنتجات"
+
+#: wc-bulk-order-generator.php:696
+msgid "Number of products to export per batch (5-30)"
+msgstr "عدد المنتجات التي سيتم تصديرها في كل دفعة (5-30)"
+
+#: wc-bulk-order-generator.php:704
+msgid "Product Type"
+msgstr "نوع المنتج"
+
+#: wc-bulk-order-generator.php:705
+msgid ""
+"Choose the data types from the selection fields below. If none are selected, "
+"all products will be exported."
+msgstr ""
+"اختر أنواع البيانات من الحقول أدناه. إذا لم يتم تحديد أي خيار، سيتم تصدير "
+"جميع المنتجات."
+
+#: wc-bulk-order-generator.php:718
+msgid "Product Category"
+msgstr "تصنيف المنتج"
+
+#: wc-bulk-order-generator.php:730
+msgid "Product Tag"
+msgstr "وسم المنتج"
+
+#: wc-bulk-order-generator.php:786
+msgid "Order Import"
+msgstr "استيراد الطلبات"
+
+#: wc-bulk-order-generator.php:792 wc-bulk-order-generator.php:882
+msgid "CSV File"
+msgstr "ملف CSV"
+
+#: wc-bulk-order-generator.php:809
+msgid "Upload a CSV file with order details"
+msgstr "قم برفع ملف CSV يحتوي على تفاصيل الطلب"
+
+#: wc-bulk-order-generator.php:811
+msgid "Accepted: .csv | 50MB only | Use only WC Bulk Generator CSV"
+msgstr ""
+"المقبول: ‎.csv‎ | الحد الأقصى 50MB | استخدم فقط ملف CSV الخاص بـ WC Bulk "
+"Generator"
+
+#: wc-bulk-order-generator.php:822
+#, fuzzy
+#| msgid "Number of orders to export per batch (5-30)."
+msgid "Number of orders to process per batch (5-30)"
+msgstr "عدد الطلبات التي سيتم تصديرها في كل دفعة (5-30)."
+
+#: wc-bulk-order-generator.php:850 wc-bulk-order-generator.php:942
+msgid "Skipped"
+msgstr "تم التخطي"
+
+#: wc-bulk-order-generator.php:876
+msgid "Product Import"
+msgstr "استيراد المنتجات"
+
+#: wc-bulk-order-generator.php:899
+msgid "Upload a CSV file with product details"
+msgstr "قم برفع ملف CSV يحتوي على تفاصيل المنتج"
+
+#: wc-bulk-order-generator.php:901
+#, fuzzy
+#| msgid "Accepted: .csv | 50MB only | Use only WC Bulk Generator CSV"
+msgid "Accepted: .csv | 50MB only | Use only WC Bulk Generator CSV "
+msgstr ""
+"المقبول: ‎.csv‎ | الحد الأقصى 50MB | استخدم فقط ملف CSV الخاص بـ WC Bulk "
+"Generator"
+
+#: wc-bulk-order-generator.php:912
+#, fuzzy
+#| msgid "Number of products to export per batch (5-30)"
+msgid "Number of products to process per batch (5-30)"
+msgstr "عدد المنتجات التي سيتم تصديرها في كل دفعة (5-30)"
+
+#: wc-bulk-order-generator.php:964
+msgid "Delete Order/Product"
+msgstr "حذف الطلب / المنتج"
+
+#: wc-bulk-order-generator.php:968
+msgid "Warning:"
+msgstr "تحذير:"
+
+#: wc-bulk-order-generator.php:969
+msgid ""
+"These actions permanently delete data and cannot be undone. Please backup "
+"your database before proceeding."
+msgstr ""
+"هذه الإجراءات تحذف البيانات نهائيًا ولا يمكن التراجع عنها. يرجى أخذ نسخة "
+"احتياطية من قاعدة البيانات قبل المتابعة."
+
+#: wc-bulk-order-generator.php:973
+msgid ""
+"If any new orders or products are found, or if errors occur during deletion, "
+"they will be automatically adjusted in deletion process. Reloading or "
+"resetting the page during deletion may interrupt the batch process."
+msgstr ""
+
+#: wc-bulk-order-generator.php:980 wc-bulk-order-generator.php:1010
+msgid "Delete All Products"
+msgstr "حذف جميع المنتجات"
+
+#: wc-bulk-order-generator.php:981 wc-bulk-order-generator.php:1017
+msgid "This will remove:"
+msgstr ""
+
+#: wc-bulk-order-generator.php:983
+msgid "All product data and meta"
+msgstr "جميع بيانات المنتج والبيانات الوصفية"
+
+#: wc-bulk-order-generator.php:984
+msgid "Product categories and tags"
+msgstr "تصنيفات وعلامات المنتجات"
+
+#: wc-bulk-order-generator.php:985
+msgid "Product images"
+msgstr "صور المنتجات"
+
+#: wc-bulk-order-generator.php:986
+msgid "Product variations"
+msgstr "تنويعات المنتجات"
+
+#: wc-bulk-order-generator.php:994 wc-bulk-order-generator.php:1030
+#, fuzzy
+#| msgid "Total Processed"
+msgid "Processed:"
+msgstr "إجمالي المعالج"
+
+#: wc-bulk-order-generator.php:998 wc-bulk-order-generator.php:1030
+msgid "/"
+msgstr ""
+
+#: wc-bulk-order-generator.php:1016 wc-bulk-order-generator.php:1040
+msgid "Delete All Orders"
+msgstr "حذف جميع الطلبات"
+
+#: wc-bulk-order-generator.php:1019
+msgid "All order data and meta"
+msgstr "جميع بيانات الطلب والبيانات الوصفية"
+
+#: wc-bulk-order-generator.php:1020
+msgid "Order items and notes"
+msgstr "عناصر الطلب والملاحظات"
+
+#: wc-bulk-order-generator.php:1021
+msgid "Customer order history"
+msgstr "سجل طلبات العميل"
+
+#: wc-bulk-order-generator.php:1022
+msgid "Related refunds"
+msgstr "عمليات الاسترداد المرتبطة"

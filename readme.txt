@@ -1,10 +1,10 @@
-=== Bulk Order & Product Generator, Import Export for WooCommerce ===
+=== BulkSuite - Bulk Order & Product Generator for WooCommerce ===
 Contributors: devsabbirahmed
 Tags: order export, woocommerce, generator, bulk order generator, bulk product generator
 Requires at least: 5.9
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 5.6
-Stable tag: 1.4.3
+Stable tag: 1.5.0
 License: GPL-2.0+
 License URI: http://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -12,7 +12,7 @@ Generate unlimited test orders and products for WooCommerce with realistic data.
 
 == Description ==
 
-Bulk Order & Product Generator, Import Export for WooCommerce helps developers and store owners create realistic WooCommerce test data quickly. Generate thousands of WooCommerce products and orders with just a few clicks.
+BulkSuite - Bulk Order & Product Generator for WooCommerce helps developers and store owners create realistic WooCommerce test data quickly. Generate thousands of WooCommerce products and orders with just a few clicks.
 
 ## 🚀 Key Features
 
@@ -94,7 +94,19 @@ The plugin uses optimized batch processing and caching to minimize server load. 
 
 == Changelog ==
 
-### 1.4.3 – 15 Feb 2025
+### 1.5.0 – 23 July 2026
+#### ✨ New
+- **Product Name Prefixed**  
+  - Users can now add custom prefix and suffix before create demo products.
+  - Product names Replaced the adjective/noun/category word soup with a pool of ~65 real product names across categories (apparel, electronics, home, health, sports, office).
+- **Enhancement:** Each variable product variation now have SKU 
+- **Enhancement:** SDK updated
+
+### 1.4.4 – 15 Feb 2025
+- ** 🛠 Security & Maintenance Update**
+    - Applied important security patches.
+
+### 1.4.3 – 14 Feb 2025
 - **Enhancement:** SDK and Product image generator
 
 ### 1.4.2 – 11 Feb 2025

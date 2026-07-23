@@ -394,7 +394,9 @@ jQuery(document).ready(function($) {
                 price_max: $('#price_max').val(),
                 batch_number: currentProductBatch,
                 product_types: window.selectedProductTypes,
-                use_random_images: $('#use_random_images').is(':checked') ? 1 : 0
+                use_random_images: $('#use_random_images').is(':checked') ? 1 : 0,
+                product_name_prefix: $('#product_name_prefix').val(),
+                product_name_suffix: $('#product_name_suffix').val()
             },
             
             success: function(response) {

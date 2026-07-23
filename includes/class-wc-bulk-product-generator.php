@@ -22,11 +22,30 @@ class WC_Bulk_Product_Generator {
     }
 
     private function init_sample_data() {
-        // Sample product titles and descriptions for random generation
-        $this->product_titles = array(
-            'adjectives' => array('Premium', 'Deluxe', 'Professional', 'Essential', 'Advanced', 'Classic', 'Modern', 'Ultra', 'Smart', 'Eco-friendly'),
-            'nouns' => array('Widget', 'Gadget', 'Tool', 'Device', 'System', 'Solution', 'Package', 'Kit', 'Set', 'Bundle'),
-            'categories' => array('Pro', 'Plus', 'Elite', 'Max', 'Lite', 'Basic', 'Premium', 'Ultimate', 'Standard', 'Deluxe')
+        // Real-sounding product names pool
+        $this->product_names = array(
+            // Apparel & Accessories
+            'Classic Leather Wallet', 'Slim Fit Chino Pants', 'Merino Wool Sweater', 'Canvas Tote Bag',
+            'Polarized Sunglasses', 'Waterproof Hiking Boots', 'Cashmere Scarf', 'Denim Jacket',
+            'Running Shorts', 'Yoga Leggings', 'Oxford Button-Down Shirt', 'Leather Belt',
+            // Electronics & Tech
+            'Wireless Noise-Cancelling Headphones', 'Portable Bluetooth Speaker', 'USB-C Hub',
+            'Mechanical Keyboard', 'Ergonomic Mouse', 'Phone Stand Desk Mount', 'LED Desk Lamp',
+            'Webcam 1080p', 'Smart Plug', 'Portable Charger 20000mAh', 'Cable Management Kit',
+            // Home & Kitchen
+            'Stainless Steel Water Bottle', 'French Press Coffee Maker', 'Bamboo Cutting Board',
+            'Cast Iron Skillet', 'Non-Stick Frying Pan', 'Electric Kettle', 'Airtight Food Containers Set',
+            'Silicone Baking Mat', 'Dish Drying Rack', 'Kitchen Scale', 'Reusable Produce Bags',
+            // Health & Beauty
+            'Vitamin C Serum', 'Moisturizing Face Cream', 'Natural Lip Balm', 'Bamboo Toothbrush',
+            'Essential Oil Diffuser', 'Foam Roller', 'Resistance Bands Set', 'Yoga Block',
+            'Shea Butter Body Lotion', 'Charcoal Face Mask',
+            // Sports & Outdoors
+            'Stainless Steel Thermos', 'Trekking Poles', 'Camping Lantern', 'Dry Bag 20L',
+            'Compression Socks', 'Jump Rope', 'Pull-Up Bar', 'Gym Gloves',
+            // Office & Stationery
+            'Hardcover Notebook', 'Fountain Pen', 'Desk Organizer', 'Monitor Riser',
+            'Wrist Rest Pad', 'Sticky Notes Set', 'Wireless Charging Pad', 'Laptop Sleeve',
         );
 
         $this->product_descriptions = array(
@@ -71,6 +90,8 @@ class WC_Bulk_Product_Generator {
         $price_max = isset($_POST['price_max']) ? floatval($_POST['price_max']) : 100;
         $product_types = isset($_POST['product_types']) && is_array($_POST['product_types']) ? array_map('sanitize_text_field', wp_unslash($_POST['product_types'])) : array('simple');
         $use_random_images = isset($_POST['use_random_images']) ? absint($_POST['use_random_images']) : 0;
+        $prefix = isset($_POST['product_name_prefix']) ? sanitize_text_field(wp_unslash($_POST['product_name_prefix'])) : '';
+        $suffix = isset($_POST['product_name_suffix']) ? sanitize_text_field(wp_unslash($_POST['product_name_suffix'])) : '';
         
         if ($batch_size < 1 || $batch_size > 50) {
             $batch_size = 20;
@@ -88,7 +109,7 @@ class WC_Bulk_Product_Generator {
             // Process products in smaller chunks for better memory management
             for ($i = 0; $i < $batch_size; $i++) {
                 try {
-                    $product_data = $this->generate_product_data($price_min, $price_max, $product_types);
+                    $product_data = $this->generate_product_data($price_min, $price_max, $product_types, $prefix, $suffix);
                     
                     // Verify product data
                     if (empty($product_data['title']) || empty($product_data['description'])) {
@@ -133,15 +154,15 @@ class WC_Bulk_Product_Generator {
         }
     }
 
-    private function generate_product_data($price_min, $price_max, $product_types = array('simple')) {
+    private function generate_product_data($price_min, $price_max, $product_types = array('simple'), $prefix = '', $suffix = '') {
         // Pick a random product type from the selected types
         $type = $product_types[array_rand($product_types)];
-        // Generate random product title
-        $adjective = $this->product_titles['adjectives'][array_rand($this->product_titles['adjectives'])];
-        $noun = $this->product_titles['nouns'][array_rand($this->product_titles['nouns'])];
-        $category = $this->product_titles['categories'][array_rand($this->product_titles['categories'])];
         
-        $title = $adjective . ' ' . $noun . ' ' . $category;
+        // Pick a random real product name
+        $base_name = $this->product_names[array_rand($this->product_names)];
+        
+        // Apply prefix and/or suffix if provided
+        $title = trim($prefix . ' ' . $base_name . ' ' . $suffix);
 
         // Generate random description
         $intro = $this->product_descriptions['intros'][array_rand($this->product_descriptions['intros'])];
@@ -166,8 +187,8 @@ class WC_Bulk_Product_Generator {
             $sale_price = round($regular_price * (1 - $discount), 2);
         }
 
-        // Generate SKU
-        $sku = sprintf('TEST-%s-%d', strtoupper(substr(str_replace(' ', '', $noun), 0, 3)), wp_rand(1000000, 9999999));
+        // Generate SKU based on the base product name
+        $sku = sprintf('PROD-%s-%d', strtoupper(substr(str_replace(' ', '', $base_name), 0, 4)), wp_rand(1000000, 9999999));
 
         return array(
             'title' => $title,
@@ -514,6 +535,20 @@ class WC_Bulk_Product_Generator {
             $variation->set_stock_quantity(wp_rand(1, 50));
             $variation->set_manage_stock(true);
             $variation->set_stock_status('instock');
+
+            // Generate a unique SKU for the variation
+            $parent_sku = $product->get_sku();
+            $attr_slug = implode('-', array_map('sanitize_title', $combo));
+            $base_sku = ($parent_sku ? $parent_sku : 'prod-' . $product_id) . '-' . $attr_slug;
+            // Ensure uniqueness
+            $sku = $base_sku;
+            $suffix = 1;
+            while ( wc_get_product_id_by_sku( $sku ) ) {
+                $sku = $base_sku . '-' . $suffix;
+                $suffix++;
+            }
+            $variation->set_sku($sku);
+
             $variation->save();
         }
     }

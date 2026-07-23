@@ -1,15 +1,15 @@
 <?php
 /**
- * Plugin Name: Bulk Order & Product Generator, Import Export for WooCommerce
+ * Plugin Name: BulkSuite - Bulk Order & Product Generator for WooCommerce
  * 
  * @author            devsabbirahmed
  * @copyright         2024- SABBIRSAM
  * @license           GPL-2.0-or-laters
- * @package Bulk Order & Product Generator, Import Export for WooCommerce
+ * @package BulkSuite - Bulk Order & Product Generator for WooCommerce
  * 
  * Plugin URI: https://wordpress.org/plugins/wc-bulk-order-generator
  * Description: Generate, import, export, and delete WooCommerce orders and products in bulk with optimized batch processing for fast, reliable store management and testing.
- * Version: 1.4.3
+ * Version: 1.5.0
  * Requires at least: 5.9
  * Requires PHP:      5.6
  * Requires Plugins: woocommerce
@@ -62,7 +62,7 @@
 
 
 // Define plugin constants.
-define('WC_BULK_GENERATOR_VERSION', '1.4.3');
+define('WC_BULK_GENERATOR_VERSION', '1.5.0');
 define( 'WC_BULK_GENERATOR_PLUGIN_FILE', __FILE__ );
 define('WC_BULK_GENERATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WC_BULK_GENERATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -473,6 +473,28 @@ class WC_Bulk_Order_Generator {
                                     </label>
                                 </div>
                                 <p class="description"><?php esc_html_e('Select which types of products to generate. If more than one is selected, types will be chosen randomly for each product.', 'wc-bulk-order-generator'); ?></p>
+                            </div>
+
+                            <!-- Product Name Prefix -->
+                            <div class="setting-card">
+                                <label for="product_name_prefix"><?php esc_html_e('Product Name Prefix (Optional)', 'wc-bulk-order-generator'); ?></label>
+                                <input type="text" id="product_name_prefix" name="product_name_prefix" 
+                                       value="" 
+                                       placeholder="e.g., Premium, Deluxe">
+                                <p class="description">
+                                    <?php esc_html_e('Add a prefix before each product name', 'wc-bulk-order-generator'); ?>
+                                </p>
+                            </div>
+
+                            <!-- Product Name Suffix -->
+                            <div class="setting-card">
+                                <label for="product_name_suffix"><?php esc_html_e('Product Name Suffix (Optional)', 'wc-bulk-order-generator'); ?></label>
+                                <input type="text" id="product_name_suffix" name="product_name_suffix" 
+                                       value="" 
+                                       placeholder="e.g., Edition, Series">
+                                <p class="description">
+                                    <?php esc_html_e('Add a suffix after each product name', 'wc-bulk-order-generator'); ?>
+                                </p>
                             </div>
 
                             <div class="setting-card">
