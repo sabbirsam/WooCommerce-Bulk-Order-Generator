@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
 
 class WC_Bulk_Product_Generator {
     private $batch_size = 20;
-    private $product_titles = array();
+    private $product_names = array();
     private $product_descriptions = array();
     
     public function __construct() {
